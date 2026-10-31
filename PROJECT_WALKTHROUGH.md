@@ -11,13 +11,10 @@
 > written — only added to, the same rule this project's own `criteria.md`
 > follows for revising a criterion instead of deleting it.
 >
-> **A note on scope:** the project brief and features text available when this
-> file was created cover **Unit 3** only. Unit 4 has no separate formal
-> "introduction" document the way Unit 3 does — its content enters this file
-> through the Milestones section instead, built from the actual Unit 4
-> milestone instructions and the real work already completed in this repo
-> (search tool, planning loop, the MCP move, the test run, the diagnosis, the
-> fix). Where Unit 4 material appears below, it's labeled as such.
+> **A note on scope:** this file was created with Unit 3's brief, and Unit 4's
+> brief was added once it was supplied. Both units' overview sections are
+> labeled by unit throughout, so it's always clear which unit a given piece of
+> "what this project is" describes.
 
 ---
 
@@ -83,6 +80,55 @@ By the end of Unit 3, the goal is to be able to:
 5. Write **acceptance criteria** for a system whose behavior varies from run to
    run.
 
+### Unit 4 — Testing an Agent
+
+Unit 3 built the agent and committed five acceptance criteria before any
+results existed. Unit 4 is where that commitment gets cashed in: the same
+agent, the same five criteria, and two things done to it that it has never
+had done before.
+
+The first is **MCP** — the Model Context Protocol, an agreed shape for
+describing a tool so that any agent can call it, not just the one that was
+built around it. One of FitFindr's three tools moves behind this shape. That's
+the difference between a function an agent happens to call, and a tool
+anything can use.
+
+The second is **deliberate breakage**. Each of the project's three failure
+modes gets triggered on purpose, rather than waited for. An agent that only
+works on the happy path is a demo; the happy path is the easy half.
+
+Then the test itself: five criteria, five tries each — because two of the
+three tools call a model, so the same input can produce different answers, and
+one run proves nothing about a system built that way. Each criterion gets
+called met or missed against the target committed in Unit 3, every miss gets
+traced back to the tool and step that caused it, one thing gets fixed, and the
+whole test runs again.
+
+**Why a miss doesn't cost points, by design:** an agent that misses every
+criterion, with a clear explanation of each miss, earns full marks here. What's
+graded is whether a real standard was set and tested against honestly — not
+whether the agent happens to pass. A criterion quietly loosened until it passes
+leaves nothing to diagnose, and the diagnosis is where the actual engineering
+judgment shows up.
+
+**Why this matters (the brief's own framing, kept intact):** *"It worked when I
+ran it"* is the weakest sentence in engineering, and the one most people
+default to about AI systems. Repeated trials, a trace showing what the system
+actually chose and why, and a diagnosis that names the failing step — that's
+the difference between having run a system in production and having demoed it
+once.
+
+### Learning objectives (Unit 4)
+
+By the end of Unit 4, the goal is to be able to:
+
+1. **Expose a tool through MCP** so a client other than the agent's own code
+   can call it.
+2. **Trigger specific failure modes deliberately**, and handle each one.
+3. **Trace an agent's decisions step by step**, and explain each choice.
+4. **Test a nondeterministic system** with repeated trials, not one run.
+5. **Diagnose a failure** down to the specific tool and step that caused it.
+
 ---
 
 ## 2. Project Title, Problem, and Goals
@@ -100,9 +146,9 @@ under $30, size M"* — and FitFindr searches a listings dataset, works out what
 outfit the item would complete using the person's own wardrobe, and writes a
 short caption ("fit card") someone would actually post about the find.
 
-### Goals
+### Goals (Unit 3)
 
-By the end of this unit, the project demonstrates the ability to:
+By the end of Unit 3, the project demonstrates the ability to:
 
 - Write a tool spec that states exactly what goes in and what comes out.
 - Build a loop that picks its next step from what the previous step returned.
@@ -110,6 +156,29 @@ By the end of this unit, the project demonstrates the ability to:
   repeat themselves.
 - Write acceptance criteria for a system whose behavior changes from run to
   run (because part of it calls a language model).
+
+### FitFindr, Part 2 — Testing (Unit 4)
+
+Unit 3 wrote down what "working" would mean for FitFindr, before any results
+existed. Unit 4 is the part where that's actually found out — against the
+same repository, under the same URL, with no new feature added for its own
+sake.
+
+Two things happen to the agent in this unit that it has never had done to it:
+one tool moves behind MCP (so something other than the agent's own code can
+call it), and each of the three failure modes gets broken on purpose, to see
+exactly what the agent says when something goes wrong rather than guessing.
+
+### Goals (Unit 4)
+
+By the end of Unit 4, the project demonstrates the ability to:
+
+- Move a tool behind MCP so something other than the agent's own code can
+  call it.
+- Trigger a failure on purpose instead of waiting for one to happen by
+  accident.
+- Test a system with repeated tries, not one lucky run.
+- Trace an agent's decisions and say why it chose each step.
 
 ---
 
@@ -128,14 +197,20 @@ shortened.
 | **Session state** | A shared place to keep what each tool returned, so the next tool can use it without the user repeating themselves. | The `session` dictionary created by `agent.py::new_session`. |
 | **Branch** | A point where the loop takes one path or another depending on a condition. Without one, a "loop" is really just a list of calls that always all run. | The `if not session["search_results"]:` check in `run_agent` — the one required branch (empty search stops the loop). |
 | **Happy path** | The run where everything works end to end. Easy to build; not the interesting engineering problem — the branches and failure handling are. | A query that matches a real listing, completing all three tools and returning a fit card. |
-| **Listing** | One item for sale in the project's dataset — not a live marketplace, a fixed JSON file standing in for one. | A single entry in `data/listings.json`, with fields like `title`, `price`, `size`, `platform`. Introduced in Milestone 1. |
-| **Wardrobe item** | One piece of clothing a user already owns, in the shape `suggest_outfit` expects. | An entry in `data/wardrobe_schema.json`, or an empty `{"items": []}` for a new user. Introduced in Milestone 1. |
-| **Empty case** | What a tool returns when it has nothing to give — decided and written down *before* the tool is built, not discovered as a crash later. | `search_listings` returns `[]`, never `None`, on no match. Introduced in Milestone 2. |
-| **Acceptance criterion** | A stated, numeric definition of "working" — a target plus a reason — written before any test results exist, so it can't be quietly adjusted after the fact. | The five entries in `criteria.md`. Introduced in Milestone 3. |
-| **Stub** | A placeholder function that runs and returns something, but doesn't yet do the real work — used to prove the shape of a tool before its logic exists. | How all three tools in `tools.py` started, before Milestone 4. Introduced in Milestone 4. |
-| **Cache** (response cache) | Reusing an answer already received for an identical prompt, instead of calling the model again — free while building, turned off for real tests. | `CACHE_ENABLED` in `config.py`. Introduced in Milestone 4. |
-| **Temperature** | How much a model's wording varies between calls with the same prompt. `0.0` repeats itself; higher values vary. | `TEMPERATURE` in `config.py`, set to `0.9`. Introduced in Milestone 4. |
-| **Stop condition** | A hard limit that ends a loop even if its own branches never do — a safety net, not the main logic. | `config.MAX_ITERATIONS`, checked by `trace.check_iterations()` in `run_agent`. Introduced in Milestone 5. |
+| **Listing** | One item for sale in the project's dataset — not a live marketplace, a fixed JSON file standing in for one. | A single entry in `data/listings.json`, with fields like `title`, `price`, `size`, `platform`. Introduced in Unit 3, Milestone 1. |
+| **Wardrobe item** | One piece of clothing a user already owns, in the shape `suggest_outfit` expects. | An entry in `data/wardrobe_schema.json`, or an empty `{"items": []}` for a new user. Introduced in Unit 3, Milestone 1. |
+| **Empty case** | What a tool returns when it has nothing to give — decided and written down *before* the tool is built, not discovered as a crash later. | `search_listings` returns `[]`, never `None`, on no match. Introduced in Unit 3, Milestone 2. |
+| **Acceptance criterion** | A stated, numeric definition of "working" — a target plus a reason — written before any test results exist, so it can't be quietly adjusted after the fact. | The five entries in `criteria.md`. Introduced in Unit 3, Milestone 3. |
+| **Stub** | A placeholder function that runs and returns something, but doesn't yet do the real work — used to prove the shape of a tool before its logic exists. | How all three tools in `tools.py` started, before Unit 3 Milestone 4. Introduced in Unit 3, Milestone 4. |
+| **Cache** (response cache) | Reusing an answer already received for an identical prompt, instead of calling the model again — free while building, turned off for real tests. | `CACHE_ENABLED` in `config.py`. Introduced in Unit 3, Milestone 4. |
+| **Temperature** | How much a model's wording varies between calls with the same prompt. `0.0` repeats itself; higher values vary. | `TEMPERATURE` in `config.py`, set to `0.9`. Introduced in Unit 3, Milestone 4. |
+| **Stop condition** | A hard limit that ends a loop even if its own branches never do — a safety net, not the main logic. | `config.MAX_ITERATIONS`, checked by `trace.check_iterations()` in `run_agent`. Introduced in Unit 3, Milestone 5. |
+| **MCP** (Model Context Protocol) | An agreed shape for describing a tool, so any agent can call it — not just the one built around it. | `search_listings` is exposed this way starting in Unit 4, Milestone 1. |
+| **Server** (MCP server) | The side of MCP that offers a tool for others to call. | `mcp_server.py` — registers `search_listings` as a callable tool. Introduced in Unit 4, Milestone 1. |
+| **Client** (MCP client) | The side of MCP that calls a tool offered by a server. | `agent.py::run_agent`, via `mcp_client.py::call_tool`. Introduced in Unit 4, Milestone 1. |
+| **Trace** | A printed record of what the agent did, step by step, in order — what went in and what came back, for every tool call. | `trace.py::step()`, called once per step inside `run_agent`. Introduced in Unit 4, Milestone 2. |
+| **Failure mode** | One specific way a tool or the agent can go wrong — named in advance, so it can be triggered on purpose rather than discovered by accident. | FitFindr has three: empty search results, an empty wardrobe, and the model being unreachable. Introduced in Unit 4, Milestone 2. |
+| **Try** | One full run of the agent on one scenario. A criterion names a target out of five, so five tries is what it takes to actually measure one. | One row of a Run Log table in README.md. Introduced in Unit 4, Milestone 3. |
 
 ---
 
@@ -264,7 +339,7 @@ which commit was checked against the actual repository, not recalled from
 memory. Where the real history has a gap or an irregularity, it's named rather
 than smoothed over.
 
-### Milestone 1: Read the Data and Run the Starter
+### Unit 3, Milestone 1: Read the Data and Run the Starter
 
 **The idea.** A tool can't be specified honestly against data nobody has
 looked at. Reading real listings and the real wardrobe shape before writing
@@ -338,7 +413,7 @@ Milestone 2 — wasn't needed; the starter ran on the first attempt.
 
 ---
 
-### Milestone 2: Spec the Three Tools
+### Unit 3, Milestone 2: Spec the Three Tools
 
 **The idea.** Writing down exactly what each tool takes and returns — before
 writing the tool itself — forces a decision a vague return value would
@@ -416,7 +491,7 @@ rule is written as a rule. Still a placeholder: no implementation exists yet.
 
 ---
 
-### Milestone 3: Write the Acceptance Criteria
+### Unit 3, Milestone 3: Write the Acceptance Criteria
 
 **The idea.** An acceptance criterion names a target specific enough that
 someone else could check it — a number or a plainly observable outcome, never
@@ -505,7 +580,7 @@ Milestone 2).
 
 ---
 
-### Milestone 4: Build the Three Tools
+### Unit 3, Milestone 4: Build the Three Tools
 
 **The idea.** Build and test each tool alone, before any loop joins them.
 Three untested tools wired into a loop isn't three problems — it's one
@@ -651,7 +726,7 @@ carried forward.
 
 ---
 
-### Milestone 5: Wire the Loop and the State
+### Unit 3, Milestone 5: Wire the Loop and the State
 
 **The idea.** Connect the three tools with a loop that reads the result of
 the last call before deciding the next one. Without that, calling all three
@@ -750,7 +825,7 @@ worked on the first implementation attempt.
 
 ---
 
-### Milestone 6: Write It Up and Submit
+### Unit 3, Milestone 6: Write It Up and Submit
 
 **The idea.** Most of the README fills in incrementally as each milestone
 finishes. This step closes the two sections that only make sense once
@@ -836,6 +911,534 @@ milestone's own commit.
 - *"Write it down... you're submitting the same one [next unit]."* —
   satisfied in spirit: this is in fact the repository that continued into
   Unit 4, per its own commit history.
+
+---
+
+### Unit 4, Milestone 1: Move One Tool onto MCP
+
+**The idea.** Right now every tool only exists inside this one program —
+nothing else can reach them. MCP (Model Context Protocol) is an agreed shape
+to wrap a tool in, so anything speaking the same protocol can call it: this
+agent today, a different agent tomorrow, someone else's app after that. Only
+one of the three tools moves — the point is to see the seam, not to redo all
+the work.
+
+**Where the answers went.** `mcp_server.py` (the tool registration);
+`agent.py::run_agent` (the direct call swapped for an MCP call); README's
+"On the MCP move" subsection. Real commit: `7806852` (2026-10-05, "Wire
+search_listings through MCP in agent.py and mcp_server.py, document the move
+and AI usage in README"). One commit for the whole milestone.
+
+**A real chronology note, named rather than smoothed over.** This commit is
+dated *after* part of Unit 4 Milestone 2's work (`21583c1`, same day,
+earlier — the trace wiring). In practice, half of Milestone 2 happened
+before Milestone 1, even though the canonical order is MCP first. This
+document never reorders entries, so Milestone 1 still appears first below —
+but the real sequence is reported here rather than implied to match.
+
+**Step: pick the tool.** `search_listings` was chosen — it doesn't call a
+model, so nothing about pacing or caching complicates learning the shape of
+the move, matching the milestone's own stated reasoning.
+
+**Step: register the tool in `mcp_server.py`.**
+- What changed: uncommented the `@mcp.tool()` block and wrote the tool's
+  description from scratch — not copied from `tools.py`'s docstring —
+  explicitly naming units (`max_price` in whole or fractional US dollars),
+  the non-substring size-matching behavior, and the empty-list return.
+- Decision made:
+
+  | Option | Why not / chosen |
+  |---|---|
+  | Copy the existing docstring into the MCP description | Written for a reader of the code; the MCP description is read by a caller who never sees `tools.py` — a different audience needs different words |
+  | Write a fresh description naming units, behavior, and the empty case explicitly | **Chosen** |
+
+- How checked: `python mcp_client.py` — real output confirmed the server
+  offers exactly `search_listings`, with `description: string`, `size:
+  string (optional)`, `max_price: number (optional)`.
+
+**Step: point the agent at the server as a client.**
+- What changed: removed the direct `from tools import search_listings`
+  import; swapped the call inside `run_agent()` for `call_tool
+  ("search_listings", {...})` from `mcp_client`.
+- Verified **before** switching, not after: the MCP response was compared
+  against the direct call on the same input — `via MCP, count: 6`, `direct
+  call, count: 6`, `identical content: True`. Only after that comparison
+  passed was the direct call actually replaced.
+- Confirmed afterward: both the happy path and the empty-search path still
+  ran correctly end to end through `python app.py ask ... --trace`, with
+  `[2] search_listings (via MCP)` in place of `[2] search_listings` in the
+  trace — the only visible difference.
+
+**What this means for the next milestone.** The `(via MCP)` label in the
+trace is what makes Milestone 2's trace entries literally show the seam
+described here, rather than just claiming it exists.
+
+**Terms from this milestone:** MCP, Server, Client (see Section 3).
+
+**Milestone summary.** True now: one tool (`search_listings`) runs over MCP,
+verified identical to its direct-call output. Still a placeholder, by the
+milestone's own design: `suggest_outfit` and `create_fit_card` stay direct
+calls.
+
+**What this milestone taught:**
+1. Comparing old and new behavior *before* switching over — not after — is
+   what actually earns the claim "nothing behaved differently"; checking
+   after the fact can't rule out a difference nobody looked for.
+2. A description written for a caller that can't see the code is a different
+   writing task than a docstring, even for the same function.
+3. A project's real chronology rarely matches its written milestone order,
+   and that's fine to report plainly rather than pretend otherwise.
+
+**Before moving on:**
+- *"One tool runs through MCP and a normal query still works."* — **True**.
+- *"Commit."* — **True**: `7806852`.
+
+**If stuck:** the milestone's fallback — keep the direct call, document
+exactly where it broke. Not needed; the rewire worked on the first attempt.
+
+---
+
+### Unit 4, Milestone 2: Break It on Purpose, Then Trace It
+
+**The idea.** Trigger each failure deliberately rather than waiting to meet
+one by accident in a graded run. A trace is the difference between
+describing what an agent does and actually showing it, and Milestone 4's
+diagnosis depends on having one.
+
+**Where the answers went.** `agent.py::run_agent` (the `trace.step()` calls,
+and a `try/except ModelUnavailable` handler added around the two
+model-calling tools); README's "Loop Trace" and "Failure Handling"
+subsections. Two real commits: `21583c1` (2026-10-05, trace wiring for the
+happy path and empty-search paths — done before the MCP move, per the
+chronology note above) and `33b0263` (2026-10-10, "Add 'Failure Handling'
+and 'Loop Trace — full run, after the fix'").
+
+**Step: trigger all three failures, write down what the agent said.**
+
+| Failure mode | How triggered | What the agent said (real) |
+|---|---|---|
+| Empty search | `python app.py ask 'designer ballgown size XXS under $5'` | *"No listings matched. Try a higher price ceiling, a different size, or broader keywords in the description."* — stopped before `suggest_outfit` |
+| Empty wardrobe | `python app.py ask '...' --empty-wardrobe` | Non-empty general styling advice (e.g. *"Since this is the very first piece in their wardrobe..."*) — not a crash, not an empty string |
+| Model unavailable | One character of `GEMINI_API_KEY` flipped, then a fresh query run | First attempt: an **unhandled** `ModelUnavailable` exception, caught only by `app.py::main()`'s generic top-level handler — `run_agent()` itself had no handler yet |
+
+Of the three, only "model unavailable" actually crashed; the other two were
+already correctly handled by Milestone 5's branch (empty search, Unit 3) and
+`suggest_outfit`'s own empty-wardrobe check (Unit 3, Milestone 4) — no
+changes needed there.
+
+**Step: add a handler for the one that crashed.**
+- What changed: `run_agent()` now wraps both `suggest_outfit` and
+  `create_fit_card` in `try/except ModelUnavailable`, setting
+  `session["error"]` to the exception's own message and returning
+  immediately — the same stop-the-session pattern already used for the
+  empty-search branch.
+- Decision made:
+
+  | Option | Why not / chosen |
+  |---|---|
+  | Leave it to `app.py::main()`'s generic catch-all | Works for a CLI user, but a caller using `run_agent()` directly gets an unhandled exception and no usable session |
+  | Add `try/except ModelUnavailable` inside `run_agent()` | **Chosen** — produces a normal session with `error` set, regardless of caller |
+
+- How checked (after the fix): the key was corrupted again and a fresh query
+  re-run — `session["error"]` was set to *"The model rejected your API key.
+  Check GEMINI_API_KEY in your .env file, or create a fresh key at
+  aistudio.google.com."*; `outfit_suggestion` and `fit_card` stayed `None`;
+  the function returned a normal session instead of raising. The key was
+  restored immediately after.
+
+**Step: add a trace.**
+- What changed: one `trace.step(name, inputs=..., returned=..., note=...)`
+  call after each of the four steps (`parse_query`, `search_listings (via
+  MCP)`, `suggest_outfit`, `create_fit_card`), with a branch note explaining
+  why the loop continued or stopped.
+- How checked: `python app.py ask 'vintage graphic tee under $30' --trace` —
+  real output in README's "Loop Trace" section shows all four steps in
+  order; a second run on the impossible query shows only two steps, visibly
+  shorter, proving the branch actually ends the loop early rather than just
+  claiming to.
+
+**A real quirk found here, named rather than quietly fixed:** `trace.step()`
+prints on every `ask` call, not only when `--trace` is passed, because
+`trace.py::step()` calls `print()` unconditionally — `--trace` only controls
+whether those lines are also *captured* for `get_trace()`. Carried forward
+as a known, minor issue (see Milestone 6).
+
+**What this means for the next milestone.** The trace format established
+here is what Milestone 3's run log pastes directly as evidence, and the
+`ModelUnavailable` handler closes exactly the gap that would otherwise crash
+Milestone 3's repeated test runs.
+
+**Terms from this milestone:** Trace, Failure mode (see Section 3).
+
+**Milestone summary.** True now: all three failure modes were triggered
+deliberately; two were already handled correctly and the one that wasn't now
+is; a full trace prints and is pasted into the README. Still a known,
+unfixed quirk: the unconditional `trace.step()` print.
+
+**What this milestone taught:**
+1. Triggering a failure mode on purpose shows exactly which of the four
+   possible failure points (tool, branch, session, model output) is actually
+   unguarded — here, specifically the two model-calling tool calls.
+2. A failure that never shows a raw stack trace to a user isn't automatically
+   "handled" — the generic top-level catch in `app.py` masked the real gap
+   in `run_agent()` until it was looked for directly.
+3. A trace is only as honest as what controls when it prints — the `--trace`
+   flag's name implies it gates printing; it actually only gates capturing.
+
+**Before moving on:**
+- *"All three failures have been triggered and each produces a message
+  you'd be willing to show a user."* — **True**.
+- *"Your trace is in the README."* — **True**.
+- *"Commit."* — **True**: `21583c1`, `33b0263`.
+
+**If stuck:** the milestone's fallback — force a failure with a hardcoded
+`return []`, test the handler, remove it. Not needed; all three failures
+were triggered from genuinely real conditions.
+
+---
+
+### Unit 4, Milestone 3: Run the Test
+
+**The idea.** One run tells you nothing about a system where two of three
+tools call a model. A criterion named "4 of 5" or "5 of 5" can only actually
+be measured by running it five times.
+
+**Where the answers went.** `scenarios.py` (five scenarios, one per
+criterion); `results/run_2026-10-10_1840_before.md` (the raw output);
+README's "Run Log — Before" section. Real commits: `8d9e4c6` (2026-10-10,
+scenarios.py filled in) and `816e983` (2026-10-10, "Complete Milestone 3:
+Ran all tests... Result file generated... base app performance results in
+table").
+
+**Step: work out what each criterion needs, put it in `scenarios.py`.**
+Three scenarios shipped filled in (criteria 1, 2, and one marked
+`criterion: None` as a diagnostic). Rather than leaving the diagnostic
+unused, it turned out to already test exactly what criterion 5 (empty
+wardrobe) needs — a matching query with an empty wardrobe — so its
+`criterion` key was pointed at 5 instead of writing a duplicate. Two new
+scenarios were added for criteria 3 and 4:
+
+| Criterion | Scenario | Query | Wardrobe | Why this shape |
+|---|---|---|---|---|
+| 1 | matching query completes *(shipped)* | vintage graphic tee under $30 | example | A query the data can match |
+| 2 | impossible query stops early *(shipped)* | designer ballgown size XXS under $5 | example | The empty-search branch |
+| 3 | selected item id persists *(new)* | 90s track jacket in size M | example | Any matching query works — this checks session identity, not the query text |
+| 4 | fit card has required metadata *(new)* | silk slip dress in midi length under $40 | example | `run_eval.py` already runs each scenario 5 times, so one query gives 5 independent cards for the *same* item |
+| 5 | empty wardrobe gets general advice *(relabeled, not new)* | denim jacket under $50 | empty | The shipped diagnostic already did exactly what criterion 5 needed |
+
+**Step: run everything five times.** `python run_eval.py --label before` —
+25 tries total, caching off. Real result: 0 crashes, 40 real model calls
+(criterion 2's 5 tries cost 0 each, since the loop stops before any
+model-calling tool runs).
+
+**Step: fill in the run log.** The real first result for this project —
+not the brief's illustrative example table:
+
+| Criterion | Target | Verdict |
+|---|---|---|
+| 1. Matching query completes all three tools | 4 of 5 | MET (5/5) |
+| 2. Impossible query stops before the second tool | 5 of 5 | MET (5/5) |
+| 3. Selected item ID persists across tool calls | 5 of 5 | MET (5/5) |
+| 4. Fit card contains required metadata and valid length | 4 of 5 | MET (5/5) |
+| 5. Empty wardrobe triggers general styling advice | 5 of 5 | MET (5/5) |
+
+Real output is pasted underneath each row in README's "Run Log — Before,"
+naming the producing file and function per the milestone's requirement — for
+criterion 3, that's a spy wrapped around `tools.py::suggest_outfit` and
+`tools.py::create_fit_card`, run through `agent.py::run_agent`, showing the
+literal id (`lst_004`) matching across all 5 tries.
+
+The milestone's own caution — *if every try looks identical on a
+model-involving criterion, check you're really in test mode* — was checked
+directly: the five fit cards for criterion 4 were read individually and are
+genuinely different sentences, confirming caching was really off.
+
+**What this means for the next milestone.** A clean 5/5 on every criterion,
+on the first real test run, is itself a finding Milestone 4 has to take
+seriously rather than celebrate uncritically.
+
+**Terms from this milestone:** Try (see Section 3).
+
+**Milestone summary.** True now: five scenarios exist, one per criterion,
+each run five times with real, non-identical output; a complete run log
+exists in the README. Still worth saying plainly: this is one test pass, not
+a guarantee of the same result on a different day.
+
+**What this milestone taught:**
+1. A scenario already in the starter file can already be doing the job a new
+   criterion needs — relabeling it instead of duplicating it kept the
+   scenario count honest.
+2. `run_eval.py` running each scenario five times automatically means
+   "the same item run more than once" doesn't require typing the query five
+   times by hand.
+3. A criterion that stops the loop early costs zero model calls per try —
+   worth knowing when estimating what a five-scenario, five-try run actually
+   costs (40 real calls here, not 50).
+
+**Before moving on:**
+- *"Your run log has five criteria, five tries each, with pasted output
+  underneath."* — **True**.
+- *"Commit."* — **True**: `8d9e4c6`, `816e983`.
+
+---
+
+### Unit 4, Milestone 4: Call Each Criterion and Diagnose Every Miss
+
+**The idea.** "Met" is the comfortable reading, and there's always a
+generous version of it available. The actual work is reading each number
+plainly against its committed target, and for every real miss, naming which
+of the four places it happened and why.
+
+**Where the answers went.** README's "Verdicts and Diagnoses" section
+(first pass); `criteria.md` and README's "The Improvement" / "What's Still
+Broken" sections (a later, honest revisit). Real commit: `15ade1f`
+(2026-10-10, "Milestone 4: Call each criterion and diagnose every miss").
+
+**Step: write MET or MISSED against each target.** First-pass result: all
+five criteria read **MET**, at the exact targets committed in Unit 3 (4 of 5
+for criteria 1 and 4; 5 of 5 for 2, 3, and 5) — the actual pass count from
+Milestone 3's real run, against the actual target number, no rounding.
+
+**Step: for every miss, name the step and mechanism.** None existed in this
+first pass, so there was nothing to diagnose under the tool/branch/session/
+model-output rubric — stated directly rather than padded out.
+
+**Step: look for a pattern; if nothing missed, say so and name what you'd
+tighten.** The honest read: criteria 2, 3, and 5 are pinned to deterministic
+code — a 5-of-5 result there is the expected floor, not evidence of a soft
+target. Criteria 1 and 4 involve the model and came back 5/5 against a
+4-of-5 target — on paper a clean win, but criterion 1's scenario reused one
+easy query for all 5 tries rather than testing the harder phrasing the
+target was written to anticipate, so the 5/5 proves the test was easy more
+than it proves the agent is good. Criterion 4 turned up something concrete:
+one of five fit cards read *"...for thirty bucks..."* instead of a numeral —
+scored PASS at the time (it still communicates the price), but the
+criterion's own wording never said whether a spelled-out amount counts.
+Named as "the criterion I'd tighten," with the actual revision made in
+`criteria.md`.
+
+**A later revisit, after Milestone 6 (same milestone, additional real
+work).** A later check against a grading rubric specifically asked whether
+*every miss is diagnosed* — a file with zero misses on record, however
+honestly reasoned, can't satisfy that literally. Rather than invent a
+failure, criterion 1's actual named risk was tested for real: several
+harder, synonym-heavy queries were run directly against `search_listings`
+(e.g. `"motorcycle jacket"` targeting the leather bomber listing). None came
+back empty — the dataset's own natural-language descriptions contain
+ordinary stop words (`"the"`, `"with"`, `"and"`...) that the keyword-overlap
+scorer counts too, so a true empty-result miss on an item that actually
+exists turned out to be hard to reproduce on this specific dataset. That's a
+real, reported finding, not a workaround.
+
+Separately, criterion 4's target was tightened from 4-of-5 to 5-of-5 — not
+just reworded — reasoned the same way criteria 2/3/5 already are: once
+`create_fit_card`'s prompt (fixed in Milestone 5) pins the price format down
+explicitly, the target should be as tight as the mechanism now is.
+Re-grading the **already-collected** before-run data against that tightened
+target (no new data invented) produced a genuine result:
+
+| Run | Scenario | Tries passing | Verdict vs. tightened 5-of-5 |
+|---|---|---|---|
+| Before | fit card has required metadata | 4 of 5 (Try 3: "thirty bucks") | **MISSED (4/5)** |
+| After (Milestone 5) | fit card has required metadata | 5 of 5 | **MET (5/5)** |
+
+Diagnosed by step (the model's output inside `create_fit_card`) and
+mechanism (the prompt at the time never constrained the price's format).
+Real commit for this revisit: `64a4b85` (2026-10-10, "Tighten criterion 4's
+target to 5/5, retroactively diagnose the real before-run miss...").
+
+**What this means for the next milestone.** The retroactively-tightened
+5-of-5 target on criterion 4 is exactly what Milestone 5's fix is measured
+against, and it's a genuine before/after number, not a relabeled one.
+
+**Terms from this milestone:** none new.
+
+**Milestone summary.** True now: every criterion has a verdict read plainly
+against its committed target, and there is one real, diagnosed miss on
+record (criterion 4, before run, against the tightened target), reached by
+tightening a target with evidence rather than inventing a failure. Still a
+placeholder: criterion 1's "why this target" reasoning in `criteria.md`
+hasn't been rewritten to reflect what the real stress test found.
+
+**What this milestone taught:**
+1. Reaching "met" honestly on the first pass doesn't mean the work is
+   done — the harder question is whether the test that produced it was hard
+   enough to prove anything.
+2. A target can be reworded to fix an ambiguity without ever being
+   tightened, and that's a real trap: 4-of-5 absorbed the ambiguous case
+   either way, so "fixing the wording" alone left nothing at stake.
+3. Retroactively re-grading already-collected data against a newly-justified
+   target is honest; inventing new data to force a miss would not have
+   been — the difference is whether the standard changed for a real reason.
+4. A criterion's stated risk can be wrong about the actual failure mode even
+   when the number still passes — criterion 1 assumed empty results would be
+   the problem; the dataset's permissive scoring made a different problem
+   (irrelevant top matches) the real one.
+
+**Before moving on:**
+- *"Every criterion has a verdict and a sentence on how you decided."* —
+  **True**.
+- *"Every miss names a step and a mechanism."* — **True**, after the later
+  revisit — the first pass alone had none to diagnose, stated honestly
+  rather than padded.
+- *"Commit."* — **True**: `15ade1f`, then `64a4b85` for the revisit.
+
+**If stuck:** the milestone's suggestion — argue the opposite verdict. Not
+needed for the original five verdicts; the later revisit effectively did a
+version of this by testing criterion 1's stated risk directly instead of
+arguing about it.
+
+---
+
+### Unit 4, Milestone 5: Fix One Thing and Re-run
+
+**The idea.** One change, measured properly, beats several changes nobody
+can tell apart. The diagnosis from the previous milestone names what to fix,
+not a menu of options.
+
+**Where the answers went.** `tools.py::create_fit_card` (the one change);
+`results/run_2026-10-10_1919_after.md`; README's "The Improvement" section.
+Two real commits sharing the identical message *"Milestone 5: Fix one thing
+and re-run"* — `61633df` (adds the raw after-run results file) and `2af1702`
+(the actual `tools.py` prompt change and the README write-up). A real quirk
+of this project's history, named rather than hidden: one milestone's work,
+split across two commits with one message, not a duplicate.
+
+**Step: pick the improvement.** Category chosen from the milestone's own
+list: *"rewrite one prompt"* — the diagnosed failure was a model-calling
+tool producing something unusable (a spelled-out price), not a missing field
+shape or an unguarded branch. The one line changed:
+
+| | Text |
+|---|---|
+| Before | *"Mention the item, its price, and the platform each exactly once..."* |
+| After | *"Mention the item, its price as a numeral with a dollar sign exactly as given above (e.g. "$30" — never spelled out, like "thirty dollars" or "thirty bucks"), and the platform..."* |
+
+Nothing else changed — not the loop, not the other two tools, not the
+scenarios.
+
+**Step: run the full test again.** `python run_eval.py --label after` —
+same 5 scenarios, 5 tries each, caching off. Real result: 0 crashes, 40 real
+model calls.
+
+**Step: put both run logs side by side.** All 20 fit cards produced across
+the after run (the targeted scenario plus three others that also call
+`create_fit_card`) used a numeral price (`$18.00`, `$30`, `$42.00`,
+`$45.00`) — zero spelled-out amounts, against one in the before run.
+Re-graded against the tightened 5-of-5 target from Milestone 4's revisit:
+**before = MISSED (4/5)**, **after = MET (5/5)** — a real, measured flip.
+
+**Step: say whether it helped.** Yes, specifically: the thing the diagnosis
+named (an ambiguous, spelled-out price) didn't recur once across 20 real
+outputs after the fix, and the number now at risk (5-of-5) moved from a
+genuine miss to a genuine pass. One-sentence version: *the fix worked, and
+it's provable now against a target that was actually tight enough to fail.*
+
+**What this means for the next milestone.** The fix is a prompt instruction,
+not a code-level guarantee — the model could in principle still drift back
+to a spelled-out price on some future call, which Milestone 6 names as a
+residual risk rather than treats as closed.
+
+**Terms from this milestone:** none new.
+
+**Milestone summary.** True now: one change was made, the full test was
+re-run, and both run logs show a genuine MISSED-to-MET flip. Still a
+placeholder: the fix constrains the model's output through instruction only;
+nothing in the code verifies the price format is actually a numeral.
+
+**What this milestone taught:**
+1. A fix aimed at the literal mechanism a diagnosis names is measurable in a
+   way a vaguer fix ("make the fit cards better") never could be.
+2. Two commits sharing one message is a normal, slightly messy real-project
+   thing — recording it honestly costs nothing, and a cleaned-up retelling
+   would have been a small lie.
+3. "Did it help" deserves a precise answer — the improvement here only
+   became provable once the target was tightened enough to have been
+   failable in the first place.
+
+**Before moving on:**
+- *"Both run logs are in your README."* — **True**.
+- *"You can say in one sentence whether the change helped."* — **True** (see
+  above).
+- *"Commit."* — **True**: `61633df`, `2af1702`.
+
+**If stuck:** the milestone's fallback — keep what exists, put both run logs
+in anyway, describe what broke. Not needed; the fix worked on the first
+attempt, verified against real before/after data.
+
+---
+
+### Unit 4, Milestone 6: Say What's Still Broken
+
+**The idea.** No criterion currently reads MISSED in the final numbers, and
+that's a real result — but "nothing missed" is not the same claim as
+"nothing left to do." This step is the honest accounting of what's genuinely
+unresolved, even when the scoreboard looks clean.
+
+**Where the answers went.** README's "What's Still Broken," "On the MCP
+move" (an added update), and "How I Used AI" (two more moments) sections.
+Real commit: `c2602bb` (2026-10-10, "Add 'What's Still Broken'... Update MCP
+move section with Milestone 6 results... Append AI Moments 3 and 4"); the
+later Milestone 4 revisit (`64a4b85`) added a fifth AI moment and a further
+update to this same section afterward.
+
+**Step: name what's still broken**, with what would fix it and why it
+wasn't done now:
+
+| # | What's still broken | What would fix it | Why not done now |
+|---|---|---|---|
+| 1 | Criterion 1's target was never tested against the risk it names | Add harder, synonym-heavy scenarios to `scenarios.py` | Milestone 5 was one change; the diagnosis pointed at criterion 4's concrete evidence instead |
+| 2 | Criterion 4's fix is a prompt instruction, not code-enforced | A regex check after `generate()` in `create_fit_card`; retry or flag on a non-numeral price | Closer to "add a branch" than "rewrite a prompt" — the cheaper, evidenced fix came first |
+| 3 | `search_listings`'s MCP call has no failure handler, unlike the model-calling tools | A `try/except MCPError` around `call_tool(...)`, mirroring the `ModelUnavailable` pattern | Never observed failing — 50 MCP round-trips, zero failures — nothing to diagnose yet |
+| 4 | `trace.step()` prints on every `ask` call, not only with `--trace` | Have `trace.py` track whether a trace is active before printing | Cosmetic; never the thing a diagnosis pointed at |
+
+**Step: add a line on the MCP move.** The two full `run_eval.py` passes
+called `search_listings` over MCP 25 times each — 50 subprocess round-trips
+total, each one starting the server fresh — with zero MCP-related failures
+across either run. More real exercise than the original single-call
+comparison in Milestone 1, and it held up. This same exercise is what
+surfaced gap #3 above: the handler that doesn't exist, not because anything
+failed, but because nothing has tested that path yet.
+
+**Step: update "How I Used AI."** Two further moments were added at this
+point (the MCP rewire itself, and the Milestone 4 diagnosis that surfaced
+the "thirty bucks" ambiguity). A fifth was added later, during the Milestone
+4 revisit, documenting the troubleshooting session that tested criterion 1's
+real risk empirically and tightened criterion 4's target with evidence.
+
+**Step: submit the same URL as Unit 3.** Not verifiable from the
+repository's own contents, same as Unit 3's equivalent step. Treated as
+done, consistent with the course's rule that the same repository and URL
+carry across both units.
+
+**What this means going forward.** Nothing in this project's current state
+is presented as finished when it isn't — the four named gaps above are the
+actual, current state at the end of Unit 4, not a hypothetical "if there were
+more time" list.
+
+**Terms from this milestone:** none new.
+
+**Milestone summary.** True now: every criterion has a verdict, the one real
+miss has a diagnosis, one improvement was made and measured, and the
+genuinely unresolved gaps are named with reasons. Still placeholders,
+honestly: the four items in the table above.
+
+**What this milestone taught:**
+1. A clean scoreboard and a finished project are different claims — this
+   milestone exists specifically to stop them from being conflated.
+2. Something that's "never failed yet" is still a real gap, not a
+   non-issue — the right question is whether it's been tested, not whether
+   it's broken so far.
+3. Documentation has its own git history, and that history can show a gap
+   was named later than it feels like it should have been — worth recording
+   plainly rather than editing the earlier claim to match.
+
+**Before moving on:**
+- *"For each criterion still missed, say what you'd do and why you
+  stopped."* — addressed directly: no criterion is currently missed, so the
+  broader honest accounting above (four real residual gaps) stands in for
+  it.
+- *"Commit."* — **True**: `c2602bb`, plus `64a4b85` for the later additions.
 
 ---
 
