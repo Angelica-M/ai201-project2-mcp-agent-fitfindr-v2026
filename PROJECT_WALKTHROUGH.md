@@ -180,6 +180,82 @@ By the end of Unit 4, the project demonstrates the ability to:
 - Test a system with repeated tries, not one lucky run.
 - Trace an agent's decisions and say why it chose each step.
 
+### How it's put together (architecture)
+
+One request, traced top to bottom through every file it touches. This is the
+real flow `python app.py ask '...' --trace` prints, with the file and
+function responsible for each step named directly on the diagram — not a
+simplified version of it.
+
+```
++-----------------------------------------------------+
+| You, in a terminal                                  |
+| $ python app.py ask 'vintage graphic tee under $30' |
++-----------------------------------------------------+
+                           |
+                           v
+
++------------------------------------------------------------+
+| app.py -- the command line                                 |
+| reads flags (--trace, --empty-wardrobe), picks a wardrobe, |
+| calls agent.py :: run_agent(query, wardrobe)               |
++------------------------------------------------------------+
+                               |
+                               v
+
++------------------------------------------------------------+
+| agent.py :: run_agent()  --  THE PLANNING LOOP              |
+|                                                              |
+| session = { query, parsed, search_results, selected_item,  |
+|             wardrobe, outfit_suggestion, fit_card, error }  |
+|                                                              |
+| trace.py prints one line per step, when --trace is used    |
++------------------------------------------------------------+
+                               |
+                               v
+
+STEP 1   _parse_query(query)  ->  session["parsed"]
+
+         |
+         v
+
+STEP 2   search_listings(...)  --  the ONE tool moved onto MCP
+
+         agent.py -> mcp_client.py -> (spawns) mcp_server.py
+            -> tools.py :: search_listings()
+               -> utils/data_loader.py -> data/listings.json
+
+         |
+  +------+------+   <-- THE REQUIRED BRANCH
+  |             |
+no results   results found
+  |             |
+  v             v
+
++------------------------------------+     STEP 3   suggest_outfit(item, wardrobe)
+| STOP HERE.                         |                 -> tools.py -> generate.py -> Gemini
+| session["error"] = "No listings    |                    (hosted model, via google-genai;
+| matched..." -- names what to       |                     paced + cached per config.py)
+| change (price / size / keywords)   |
+|                                    |     STEP 4   create_fit_card(outfit, item)
+| Steps 3 and 4 never run.           |                 -> tools.py -> generate.py -> Gemini
++------------------------------------+
+                                           Back to app.py: prints Found / Outfit / Fit card
+                                           (or session["error"], if it stopped at the branch)
+```
+
+Three things worth noticing in this diagram, each tied to a specific
+engineering decision documented in Section 7: `search_listings` runs in a
+**separate process** (`mcp_server.py`), reached through `mcp_client.py`
+rather than called directly — that's the Unit 4, Milestone 1 MCP move.
+`suggest_outfit` and `create_fit_card` both route through the **same**
+`generate.py`, which is deliberate — it's the one place in the whole project
+that talks to a hosted model, so pacing, caching, and error handling only
+have to be written once. And the branch in the middle is the **one required
+branch** this whole project is built around (Unit 3, Milestone 2) — without
+it, this diagram would just be a straight line, and a straight line is a
+script, not an agent.
+
 ---
 
 ## 3. Glossary
@@ -368,51 +444,74 @@ alone.
 
 ---
 
-## 6. Showcasing the Learning
+## 6. Proof: Real Evidence Behind the Big Claims
 
-Concrete evidence, pulled from Section 7 rather than re-described here — real
-output, not a summary of it. Full detail and surrounding context for each is
-in the milestone entry linked.
+**What this section is, and why it's separate from Section 5.** Section 5
+states lessons in prose — things like "an error that never shows a stack
+trace isn't automatically handled." A sentence like that is an assertion
+until something backs it up. This section is that backup: the actual,
+un-summarized output that makes each claim checkable rather than
+take-it-on-faith, with each item saying plainly **what it proves** and
+**which claim it proves** — one of Section 5's lessons, one of Section 8's
+required features, or a specific numbered criterion in `criteria.md`. Full
+surrounding context for each is in the Section 7 milestone named alongside
+it; this section only holds the receipt, not the whole story.
 
-**A tool spec that stopped a real bug before it existed.** `search_listings`'s
-size matching compares whole tokens instead of substrings specifically because
-a substring check would match `"S"` against `"US 9"` and `"L"` against
-`"XL"` — caught at spec time (Unit 3, Milestone 2) and built correctly the
-first time (Unit 3, Milestone 4).
+**Evidence 1 — a bug that never got the chance to happen.**
+```
+Problem:  "s" in "us 9".lower()  ->  True   (naive substring match)
+Fix:      token-based match — "S" only matches a size whose tokens include "s"
+Result:   "S" correctly matches "S/M", and never matches "US 9"
+```
+**What this proves:** Section 5's lesson that a specification is only as
+good as the data it was checked against — `search_listings`'s size field
+really does contain values like `"US 9"`, and the substring trap really
+would have fired on real data. (Unit 3, Milestones 2 and 4.)
 
-**Session-identity, proven, not assumed.** Across both units, `id`-level
-proof that the item `search_listings` found is the exact object
-`suggest_outfit` and `create_fit_card` received — via a spy, not an eyeball
-check:
+**Evidence 2 — the state-persistence criterion, checked by object identity,
+not by eye.**
 ```
 Try 1: session.selected_item.id='lst_004'  suggest_outfit received='lst_004'  create_fit_card received='lst_004'  -> PASS
 ```
-(5 of 5, real output — Unit 3, Milestone 5 and Unit 4, Milestone 3.)
+**What this proves:** criterion 3 in `criteria.md` — that the exact item
+object `search_listings` finds is what `suggest_outfit` and `create_fit_card`
+actually receive — 5 of 5 real tries, verified with a spy wrapped around both
+functions rather than by comparing printed titles. (Unit 3, Milestone 5 and
+Unit 4, Milestone 3.)
 
-**A clean before/after flip, not a relabeled number.** Criterion 4,
-re-graded against the same tightened target on real, already-collected data:
+**Evidence 3 — a before/after number that actually moved.**
 
-| Run | Tries passing | Verdict vs. 5-of-5 |
+| Run | Tries passing | Verdict vs. the tightened 5-of-5 target |
 |---|---|---|
-| Before | 4 of 5 (one fit card said "thirty bucks") | MISSED (4/5) |
-| After (one prompt line changed) | 5 of 5 | MET (5/5) |
+| Before the fix | 4 of 5 (one fit card said "thirty bucks") | MISSED (4/5) |
+| After the fix (one prompt line changed) | 5 of 5 | MET (5/5) |
 
-(Unit 4, Milestones 4–5.)
+**What this proves:** Section 5's lesson that a target can absorb an
+ambiguity without ever being put at risk — criterion 4 only became provable
+once its target was tightened, and this table is the actual before/after
+data, not a relabeled score. (Unit 4, Milestones 4–5.)
 
-**A trace that actually gets shorter when the agent stops early**, proving the
-branch does something rather than just claiming to:
+**Evidence 4 — a trace that gets shorter, not just a branch that's claimed to
+exist.**
 ```
 [1] parse_query ...
 [2] search_listings (via MCP)
       out: [] (empty)
-      →    branch: empty, stopping before suggest_outfit
+      ->   branch: empty, stopping before suggest_outfit
 ```
-— two steps, versus four on a matching query. (Unit 4, Milestone 2.)
+**What this proves:** the one required branch in Section 8's feature list —
+two steps print on an impossible query, versus four on a matching one, which
+is what actually distinguishes a loop with a real branch from a list of
+calls that always all run. (Unit 4, Milestone 2.)
 
-**A documented failure mode, fixed and re-verified with the key restored
-immediately after**, not just asserted: a one-character-corrupted
-`GEMINI_API_KEY` producing a clean `session["error"]` instead of a crash.
-(Unit 4, Milestone 2.)
+**Evidence 5 — a failure mode, triggered for real and recovered from, not
+just described.** A single character of `GEMINI_API_KEY` was corrupted, a
+fresh query was run, `session["error"]` came back as a clean, specific
+message instead of a crash, and the key was restored immediately after.
+**What this proves:** Section 5's lesson that an error swallowed by a
+generic top-level handler isn't the same as a handler that produces a usable
+session — this is the real before-and-after of closing that exact gap. (Unit
+4, Milestone 2.)
 
 ---
 
