@@ -966,6 +966,6 @@ One criterion has a genuine diagnosed miss on record: **criterion 4, before run,
 
 📖 **How to run this project: [RUNNING.md](RUNNING.md)**
 
-🧭 **The full project diary, decisions, and architecture reference: [PROJECT_WALKTHROUGH.md](PROJECT_WALKTHROUGH.md)**
+🧭 **Full project diary, decisions, and architecture reference: [PROJECT_WALKTHROUGH.md](PROJECT_WALKTHROUGH.md)**
 
-🛠️ **Full environment setup guide, corrected against this repo's actual state: [ENVIRONMENT_SETUP.md](ENVIRONMENT_SETUP.md)**
+🛠️ **Full environment setup guide: [ENVIRONMENT_SETUP.md](ENVIRONMENT_SETUP.md)**
