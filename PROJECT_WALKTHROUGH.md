@@ -269,7 +269,7 @@ Milestone 1.
 `mcp_client.py`'s own docstring says it plainly: "every call starts the
 server, asks, and stops it again." It is not a persistent connection — each
 of the 50 MCP round-trips made across Unit 4's two full test runs (see
-Section 7) started a fresh `mcp_server.py` subprocess, asked its one
+Section 6) started a fresh `mcp_server.py` subprocess, asked its one
 question, and shut it down.
 
 **`suggest_outfit` and `create_fit_card` share one chokepoint on purpose:**
@@ -284,7 +284,7 @@ entry point into the loop, used for every Unit 4 test run, left off the main
 diagram because it's a *testing* path rather than part of the request flow a
 user triggers. `serve.py` (an HTTP alternative to `app.py`) exists in the
 repository but belongs to Unit 9 and has never been run as part of this
-project so far — see Section 8.
+project so far — see Section 7.
 
 ---
 
@@ -393,7 +393,7 @@ python app.py ask 'vintage graphic tee under $30'
 failure below.
 
 Real output (trimmed to the parts that matter; a full trace-level version is in
-the Unit 4, Milestone 2 entry in Section 7):
+the Unit 4, Milestone 2 entry in Section 6):
 ```
 [2] search_listings (via MCP)
       out: 10 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey … +7 more
@@ -419,133 +419,114 @@ it actually happened — not repeated here.
 
 ## 5. What I Learned
 
-Cross-cutting lessons from both units together — not a restatement of the
-per-milestone findings in Section 7, which stay there in full detail.
+Eight findings from both units, each stated with the evidence behind it.
+Milestone-level detail for all of these is in Section 6.
 
-**A specification is only as good as the data it was checked against.**
-Reading real listings and a real empty wardrobe before writing `search_listings`
-(Unit 3, Milestone 1) is what caught that a size like `"W30 L30"` or `"S/M"`
-isn't guessable from the brief alone. The inverse mistake showed up later: a
-test scenario built around one easy, generously-matching query doesn't
-actually test anything (Unit 4, Milestones 3–4) — a spec or a test is only as
-honest as the data or scenario it's run against, in either direction.
+**1. A specification is only as good as the data it was checked against.**
+`search_listings`'s size field contains values like `"US 9"` and `"XL"`. A
+naive substring match (`"s" in "us 9".lower()` → `True`) matches size query
+`"S"` against listing size `"US 9"`. Fix: token-based matching — a query
+size matches a listing only if the listing's size, split into tokens, includes
+that exact token; `"S"` then matches `"S/M"` but not `"US 9"`. Caught at spec
+time (Unit 3, Milestone 2), implemented correctly on the first attempt (Unit
+3, Milestone 4). The same principle holds in reverse: a test scenario built
+around one easy, generously-matching query doesn't exercise anything (Unit
+4, Milestones 3–4) — a spec or a test is only as rigorous as the data or
+scenario it's run against.
 
-**Deterministic code and model output deserve different confidence levels,
-and conflating them is the single most common mistake available here.**
-Every 5-of-5 target in `criteria.md` sits behind a plain `if` statement; every
-4-of-5 target sits behind a model call. That distinction, made explicit in
-Unit 3 Milestone 3, is exactly what made Unit 4's diagnosis possible — without
-it, a clean 5/5 result (Unit 4, Milestone 3) would have looked like uniform
-success instead of three guaranteed passes and two untested-but-lucky ones.
+**2. Deterministic code and model-dependent output require different target
+rigor.** Every 5-of-5 target in `criteria.md` sits behind a plain `if`
+statement (e.g., `if not results:`); every 4-of-5 target sits behind a call
+to a language model. Unit 4's first test run scored 5/5 on all five
+criteria (Unit 3, Milestone 3) — on its face, uniform success. In fact it
+was three architecturally-guaranteed passes and two that happened not to
+fail. Distinguishing the two target types at the time criteria were written
+(Unit 3, Milestone 3) is what made that distinction possible to draw later.
 
-**An error that never reaches the user as a stack trace isn't automatically
-"handled."** The `ModelUnavailable` crash in Unit 4, Milestone 2 never showed
-a raw traceback to a CLI user — `app.py`'s generic top-level catch quietly
-covered for it. That's a real difference from a handler that produces a usable
-session, and the gap only showed up by testing the failure mode directly
-rather than trusting that "it didn't crash visibly" meant "it's handled."
-
-**A target can be reworded to remove an ambiguity without ever being put at
-risk.** Criterion 4's first revision (Unit 4, Milestone 4) fixed the wording
-around what counts as "mentioning the price" but left the target at 4-of-5 —
-a number the ambiguous case passed either way. Tightening the number itself,
-and re-grading real, already-collected data against it, is what turned a
-reworded sentence into an actual, provable before/after result (Unit 4,
-Milestones 4–5).
-
-**"Nothing missed" and "nothing left to do" are different claims, and the
-second one takes more work to earn honestly.** Every criterion reading MET
-(Unit 4, Milestone 3) could have been the end of the story. Milestone 4's
-revisit and Milestone 6's accounting treat a clean scoreboard as a question to
-investigate, not a result to accept — and found a real, reproducible
-diagnosis (criterion 4's pricing format) and a real, honestly-reported
-non-finding (criterion 1's assumed failure mode turned out to be hard to
-reproduce on this dataset) in the same pass.
-
-**Git history is itself a source of truth, not just a changelog.** This
-project's real commits showed things no amount of careful writing would have
-surfaced on its own: a milestone that genuinely produced no commit (Unit 3,
-Milestone 1, because reading data doesn't change files), a required section
-("How I Used AI") that wasn't actually filled in until the next unit's first
-commit (Unit 3, Milestone 6), and a real sequence where Unit 4's Milestone 2
-work happened before its Milestone 1 work, despite the canonical order
-(Unit 4, Milestone 1). None of those would be visible from reading the README
-alone.
-
----
-
-## 6. Proof: Real Evidence Behind the Big Claims
-
-**What this section is, and why it's separate from Section 5.** Section 5
-states lessons in prose — things like "an error that never shows a stack
-trace isn't automatically handled." A sentence like that is an assertion
-until something backs it up. This section is that backup: the actual,
-un-summarized output that makes each claim checkable rather than
-take-it-on-faith, with each item saying plainly **what it proves** and
-**which claim it proves** — one of Section 5's lessons, one of Section 8's
-required features, or a specific numbered criterion in `criteria.md`. Full
-surrounding context for each is in the Section 7 milestone named alongside
-it; this section only holds the receipt, not the whole story.
-
-**Evidence 1 — a bug that never got the chance to happen.**
+**3. An exception caught at the top level is not equivalent to an exception
+handled at the point of failure.** Before a handler existed, a corrupted
+`GEMINI_API_KEY` raised an unhandled `ModelUnavailable` inside `run_agent()`;
+`app.py`'s generic `except Exception` prevented a stack trace from reaching
+the CLI user, but `run_agent()` itself still crashed, and a caller using
+`run_agent()` directly would have received the raw exception. After adding
+`try/except ModelUnavailable` around both model-calling tool calls (Unit 4,
+Milestone 2), the same corrupted key produces:
 ```
-Problem:  "s" in "us 9".lower()  ->  True   (naive substring match)
-Fix:      token-based match — "S" only matches a size whose tokens include "s"
-Result:   "S" correctly matches "S/M", and never matches "US 9"
+session["error"] = "The model rejected your API key. Check GEMINI_API_KEY
+in your .env file, or create a fresh key at aistudio.google.com."
+session["outfit_suggestion"] = None
+session["fit_card"] = None
 ```
-**What this proves:** Section 5's lesson that a specification is only as
-good as the data it was checked against — `search_listings`'s size field
-really does contain values like `"US 9"`, and the substring trap really
-would have fired on real data. (Unit 3, Milestones 2 and 4.)
+— a normal session dict, not an exception. The key was restored immediately
+after this test.
 
-**Evidence 2 — the state-persistence criterion, checked by object identity,
-not by eye.**
+**4. A criterion's wording and its numeric target are independent axes; fixing
+one doesn't fix the other.** Criterion 4 originally specified a 4-of-5 target
+with ambiguous wording about what counts as "mentioning the price." The
+first revision fixed the wording but left the target at 4-of-5 — a number
+the ambiguous case (`"thirty bucks"`) satisfied regardless. Re-grading the
+same, already-collected data against a tightened 5-of-5 target produced a
+provable result:
+
+| Run | Tries passing | Verdict vs. 5-of-5 |
+|---|---|---|
+| Before (`create_fit_card` prompt unconstrained) | 4 of 5 | MISSED (4/5) |
+| After (price format specified in the prompt) | 5 of 5 | MET (5/5) |
+
+(Unit 4, Milestones 4–5.)
+
+**5. "Nothing missed" and "nothing left to do" are not equivalent claims.**
+This distinction matters because conflating them is the specific failure
+mode repeated testing is meant to catch: a clean result can mean the system
+works, or it can mean the test wasn't rigorous enough to find the failure.
+Every criterion read MET after Unit 4's first test run (Milestone 3) — a
+result that could have ended the diagnosis. It didn't: Milestone 4's revisit
+treated the clean result as a question, not a conclusion, and produced two
+outcomes of different kinds from that single question — a reproducible
+diagnosis (criterion 4's price-format ambiguity, finding 4 above) and a
+negative result reported rather than omitted (criterion 1's assumed failure
+mode — empty results on an awkwardly-phrased but valid query — proved hard
+to reproduce on this dataset, because the keyword-overlap scorer counts
+common stop words too).
+
+**6. Commit history is a primary source, not secondary documentation.** Three
+facts about this project are visible only in `git log`, not in the README:
+Unit 3, Milestone 1 produced no commit, because reading data doesn't modify
+files; the "How I Used AI" section required by Unit 3, Milestone 6 was not
+populated until Unit 4's first commit; and Unit 4's Milestone 2 work (trace
+wiring) was committed before Unit 4's Milestone 1 work (the MCP move),
+reversing the brief's stated order. All three are recorded as found, in
+Section 6, rather than reconciled to read as sequential.
+
+**7. An object-identity check and a value-equality check test different
+claims.** The milestone instructions for criterion 3 state why this
+distinction matters: state failure doesn't look like state failure, it looks
+like a tool problem — comparing printed item titles would not have caught a
+case where the correct-looking item was actually a different object. The
+check used instead:
 ```
 Try 1: session.selected_item.id='lst_004'  suggest_outfit received='lst_004'  create_fit_card received='lst_004'  -> PASS
 ```
-**What this proves:** criterion 3 in `criteria.md` — that the exact item
-object `search_listings` finds is what `suggest_outfit` and `create_fit_card`
-actually receive — 5 of 5 real tries, verified with a spy wrapped around both
-functions rather than by comparing printed titles. (Unit 3, Milestone 5 and
-Unit 4, Milestone 3.)
+5 of 5, verified by wrapping a spy around `suggest_outfit` and
+`create_fit_card` and comparing the `id` each received against
+`session["selected_item"]["id"]`. (Unit 3, Milestone 5; Unit 4, Milestone 3.)
 
-**Evidence 3 — a before/after number that actually moved.**
-
-| Run | Tries passing | Verdict vs. the tightened 5-of-5 target |
-|---|---|---|
-| Before the fix | 4 of 5 (one fit card said "thirty bucks") | MISSED (4/5) |
-| After the fix (one prompt line changed) | 5 of 5 | MET (5/5) |
-
-**What this proves:** Section 5's lesson that a target can absorb an
-ambiguity without ever being put at risk — criterion 4 only became provable
-once its target was tightened, and this table is the actual before/after
-data, not a relabeled score. (Unit 4, Milestones 4–5.)
-
-**Evidence 4 — a trace that gets shorter, not just a branch that's claimed to
-exist.**
+**8. A trace that shortens under a failing condition demonstrates that a
+branch executes; a trace of constant length under both conditions would
+demonstrate that it doesn't.**
 ```
 [1] parse_query ...
 [2] search_listings (via MCP)
       out: [] (empty)
       ->   branch: empty, stopping before suggest_outfit
 ```
-**What this proves:** the one required branch in Section 8's feature list —
-two steps print on an impossible query, versus four on a matching one, which
-is what actually distinguishes a loop with a real branch from a list of
-calls that always all run. (Unit 4, Milestone 2.)
-
-**Evidence 5 — a failure mode, triggered for real and recovered from, not
-just described.** A single character of `GEMINI_API_KEY` was corrupted, a
-fresh query was run, `session["error"]` came back as a clean, specific
-message instead of a crash, and the key was restored immediately after.
-**What this proves:** Section 5's lesson that an error swallowed by a
-generic top-level handler isn't the same as a handler that produces a usable
-session — this is the real before-and-after of closing that exact gap. (Unit
-4, Milestone 2.)
+Two steps print on an impossible query, versus four on a matching query —
+this is the required branch (Section 7's feature list) executing, as
+distinct from code that only claims to branch. (Unit 4, Milestone 2.)
 
 ---
 
-## 7. Milestones
+## 6. Milestones
 
 Documented retroactively from this repository's real history — git commits,
 `README.md`, `criteria.md` — rather than redone from scratch, per the decision
@@ -1675,7 +1656,7 @@ the real commit list.
 
 ---
 
-## 8. Features
+## 7. Features
 
 The required feature set, as specified in each unit's brief, with a note on
 how each one currently stands in this repository.
@@ -1716,7 +1697,7 @@ to a later unit (Unit 9) and is out of scope for Units 3–4.
 
 Two given, three written specifically for this project, each with its own
 stated target and a reason tied to the mechanism behind it. The full list
-lives in `criteria.md`; real results against all five are in Section 7's
+lives in `criteria.md`; real results against all five are in Section 6's
 Unit 4 milestones.
 
 ### Unit 4 required features
@@ -1732,7 +1713,7 @@ Unit 4 milestones.
 
 ---
 
-## 9. Setup
+## 8. Setup
 
 Full, general setup instructions — Python, Git, an AI coding assistant, the API
 key, and the course-wide conventions behind all of it — live in the companion
@@ -1849,5 +1830,5 @@ building free gets turned off for every Unit 4 test run
 only a real test if the model actually answers five times — so a test run
 sends more requests than a build run did, and the starter pauses and paces
 itself more than it used to while building. That pause is expected; see
-Section 4 above and the Unit 3, Milestone 4 entry in Section 7 for what a
+Section 4 above and the Unit 3, Milestone 4 entry in Section 6 for what a
 rate-limit pause actually looks like when it happens.
