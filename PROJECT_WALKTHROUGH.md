@@ -313,20 +313,106 @@ actually happened — not repeated here.
 
 ## 5. What I Learned
 
-*To be filled in as the project progresses.* This section is meant to
-synthesize real lessons across every milestone, not to restate the per-step
-findings — so it's intentionally left as a placeholder until there's a body of
-completed milestones to draw a synthesis from, rather than written in advance
-and padded out to look complete.
+Cross-cutting lessons from both units together — not a restatement of the
+per-milestone findings in Section 7, which stay there in full detail.
+
+**A specification is only as good as the data it was checked against.**
+Reading real listings and a real empty wardrobe before writing `search_listings`
+(Unit 3, Milestone 1) is what caught that a size like `"W30 L30"` or `"S/M"`
+isn't guessable from the brief alone. The inverse mistake showed up later: a
+test scenario built around one easy, generously-matching query doesn't
+actually test anything (Unit 4, Milestones 3–4) — a spec or a test is only as
+honest as the data or scenario it's run against, in either direction.
+
+**Deterministic code and model output deserve different confidence levels,
+and conflating them is the single most common mistake available here.**
+Every 5-of-5 target in `criteria.md` sits behind a plain `if` statement; every
+4-of-5 target sits behind a model call. That distinction, made explicit in
+Unit 3 Milestone 3, is exactly what made Unit 4's diagnosis possible — without
+it, a clean 5/5 result (Unit 4, Milestone 3) would have looked like uniform
+success instead of three guaranteed passes and two untested-but-lucky ones.
+
+**An error that never reaches the user as a stack trace isn't automatically
+"handled."** The `ModelUnavailable` crash in Unit 4, Milestone 2 never showed
+a raw traceback to a CLI user — `app.py`'s generic top-level catch quietly
+covered for it. That's a real difference from a handler that produces a usable
+session, and the gap only showed up by testing the failure mode directly
+rather than trusting that "it didn't crash visibly" meant "it's handled."
+
+**A target can be reworded to remove an ambiguity without ever being put at
+risk.** Criterion 4's first revision (Unit 4, Milestone 4) fixed the wording
+around what counts as "mentioning the price" but left the target at 4-of-5 —
+a number the ambiguous case passed either way. Tightening the number itself,
+and re-grading real, already-collected data against it, is what turned a
+reworded sentence into an actual, provable before/after result (Unit 4,
+Milestones 4–5).
+
+**"Nothing missed" and "nothing left to do" are different claims, and the
+second one takes more work to earn honestly.** Every criterion reading MET
+(Unit 4, Milestone 3) could have been the end of the story. Milestone 4's
+revisit and Milestone 6's accounting treat a clean scoreboard as a question to
+investigate, not a result to accept — and found a real, reproducible
+diagnosis (criterion 4's pricing format) and a real, honestly-reported
+non-finding (criterion 1's assumed failure mode turned out to be hard to
+reproduce on this dataset) in the same pass.
+
+**Git history is itself a source of truth, not just a changelog.** This
+project's real commits showed things no amount of careful writing would have
+surfaced on its own: a milestone that genuinely produced no commit (Unit 3,
+Milestone 1, because reading data doesn't change files), a required section
+("How I Used AI") that wasn't actually filled in until the next unit's first
+commit (Unit 3, Milestone 6), and a real sequence where Unit 4's Milestone 2
+work happened before its Milestone 1 work, despite the canonical order
+(Unit 4, Milestone 1). None of those would be visible from reading the README
+alone.
 
 ---
 
 ## 6. Showcasing the Learning
 
-*To be filled in as the project progresses.* This section will hold concrete
-evidence — real command output, real run logs, real before/after
-comparisons — pulled from the Milestones section once it has entries, rather
-than described in the abstract ahead of time.
+Concrete evidence, pulled from Section 7 rather than re-described here — real
+output, not a summary of it. Full detail and surrounding context for each is
+in the milestone entry linked.
+
+**A tool spec that stopped a real bug before it existed.** `search_listings`'s
+size matching compares whole tokens instead of substrings specifically because
+a substring check would match `"S"` against `"US 9"` and `"L"` against
+`"XL"` — caught at spec time (Unit 3, Milestone 2) and built correctly the
+first time (Unit 3, Milestone 4).
+
+**Session-identity, proven, not assumed.** Across both units, `id`-level
+proof that the item `search_listings` found is the exact object
+`suggest_outfit` and `create_fit_card` received — via a spy, not an eyeball
+check:
+```
+Try 1: session.selected_item.id='lst_004'  suggest_outfit received='lst_004'  create_fit_card received='lst_004'  -> PASS
+```
+(5 of 5, real output — Unit 3, Milestone 5 and Unit 4, Milestone 3.)
+
+**A clean before/after flip, not a relabeled number.** Criterion 4,
+re-graded against the same tightened target on real, already-collected data:
+
+| Run | Tries passing | Verdict vs. 5-of-5 |
+|---|---|---|
+| Before | 4 of 5 (one fit card said "thirty bucks") | MISSED (4/5) |
+| After (one prompt line changed) | 5 of 5 | MET (5/5) |
+
+(Unit 4, Milestones 4–5.)
+
+**A trace that actually gets shorter when the agent stops early**, proving the
+branch does something rather than just claiming to:
+```
+[1] parse_query ...
+[2] search_listings (via MCP)
+      out: [] (empty)
+      →    branch: empty, stopping before suggest_outfit
+```
+— two steps, versus four on a matching query. (Unit 4, Milestone 2.)
+
+**A documented failure mode, fixed and re-verified with the key restored
+immediately after**, not just asserted: a one-character-corrupted
+`GEMINI_API_KEY` producing a clean `session["error"]` instead of a crash.
+(Unit 4, Milestone 2.)
 
 ---
 
@@ -1442,12 +1528,26 @@ honestly: the four items in the table above.
 
 ---
 
+### Also in this repository, outside this walkthrough's chronicled work
+
+The real commit history includes a few commits this document doesn't narrate
+in detail: an architecture/sequence-diagram section added to `README.md`
+(`10ea8cb`) and several image-placement commits (`221e9a7`, `257c5b5`,
+`282f82d`). These were added directly to the repository rather than through
+the process this walkthrough documents, so their exact content isn't
+re-described here — named for completeness rather than left silently out of
+the real commit list.
+
+---
+
 ## 8. Features
 
-The required feature set, as specified in the brief, with a note on how each
-one currently stands in this repository.
+The required feature set, as specified in each unit's brief, with a note on
+how each one currently stands in this repository.
 
-### Three required tools (named inputs and outputs)
+### Unit 3 required features
+
+#### Three required tools (named inputs and outputs)
 
 | Tool | Signature | What it does |
 |---|---|---|
@@ -1455,35 +1555,45 @@ one currently stands in this repository.
 | `suggest_outfit` | `(new_item, wardrobe)` | Takes an item and a wardrobe, returns outfit ideas. |
 | `create_fit_card` | `(outfit, new_item)` | Writes a short caption someone would actually post. |
 
-More tools are allowed beyond these three; none have been added so far.
+More tools are allowed beyond these three; none have been added.
 
-### A planning loop with at least one required branch
+#### A planning loop with at least one required branch
 
 When `search_listings` comes back empty, the loop must stop and say so — it
 must not call the next tool (`suggest_outfit`) with nothing to work from.
 
-### Session state across tool calls
+#### Session state across tool calls
 
 The item `search_listings` finds has to flow into `suggest_outfit` on its own.
 The user is never asked to type it a second time.
 
-### A way to run it
+#### A way to run it
 
 A command-line script or a small web page — it has to work without someone
 standing next to it operating it by hand.
 
 *Current state:* `app.py` is the command-line interface (`python app.py ask
-'...'`), and it's the one used throughout this project so far. A web interface
+'...'`), and it's the one used throughout this project. A web interface
 (`serve.py`, behind an HTTP server) also exists in this repository but belongs
 to a later unit (Unit 9) and is out of scope for Units 3–4.
 
-### Five acceptance criteria
+#### Five acceptance criteria
 
-Two are given; three are written specifically for this project, each with its
-own stated target and a reason for that target (not a round number picked
-because it "seemed reasonable"). The full list lives in `criteria.md` and is
-summarized with real results in the Milestones section as those milestones are
-added.
+Two given, three written specifically for this project, each with its own
+stated target and a reason tied to the mechanism behind it. The full list
+lives in `criteria.md`; real results against all five are in Section 7's
+Unit 4 milestones.
+
+### Unit 4 required features
+
+| Feature | What it requires | Current state |
+|---|---|---|
+| One tool moved onto MCP | Pick one of the three tools; the agent calls it through MCP from then on, the other two stay direct calls | **Done** — `search_listings`, verified identical to its pre-MCP output (Milestone 1) |
+| Every failure mode triggered on purpose | Three named failure modes, each with a handler that tells the user what broke and what to try | **Done** for all three — empty search and empty wardrobe were already handled; a `ModelUnavailable` handler was added for the third (Milestone 2) |
+| A trace of one full run | Every tool call in order, with what went in and what came back | **Done** — `trace.step()` calls in `agent.py::run_agent`, pasted into README's "Loop Trace" (Milestone 2) |
+| Five tries per criterion | One run isn't a test; five tries is what it takes to score a criterion named "out of 5" | **Done** — `run_eval.py --label before` / `--label after`, 25 tries each (Milestone 3) |
+| A verdict and a diagnosis for each criterion | Met or missed against the Unit 3 target; for every miss, which tool and which step | **Done** — one real diagnosed miss exists (criterion 4, before run), tightened and re-graded with evidence (Milestone 4) |
+| One improvement, made and measured | Change one thing, run the test again, put both results side by side | **Done** — one prompt line changed in `create_fit_card`, before/after run logs show a genuine MISSED → MET flip (Milestone 5) |
 
 ---
 
@@ -1497,7 +1607,9 @@ where this specific repository's reality (its actual packages, its actual
 the general course text. This section is the condensed, project-specific
 version.
 
-### Install the dependencies and add your key
+### Unit 3 setup
+
+#### Install the dependencies and add your key
 
 **macOS / Linux**
 ```bash
@@ -1529,7 +1641,7 @@ mid-project.
 Activate the virtual environment every time a new terminal is opened — look for
 `(.venv)` at the start of the prompt.
 
-### Confirm it works
+#### Confirm it works
 
 ```bash
 python test.py
@@ -1539,7 +1651,7 @@ python test.py
 command, which command belongs to which milestone, what each file does, and
 what to do when something breaks. It is read, not edited.
 
-### The one quoting rule that matters everywhere
+#### The one quoting rule that matters everywhere
 
 ```bash
 python app.py ask 'vintage graphic tee under $30'
@@ -1552,7 +1664,7 @@ price ceiling applied, and nothing warns that it happened. That's why every
 example command in this document and in `ENVIRONMENT_SETUP.md` uses single
 quotes.
 
-### About the model calls
+#### About the model calls
 
 Two of this project's three tools (`suggest_outfit`, `create_fit_card`) call a
 hosted language model; `search_listings` does not. One full run of the agent
@@ -1564,3 +1676,43 @@ to prompts already sent while building, so re-running the same query during
 debugging costs nothing — Unit 4's test runs turn that caching off on purpose,
 because a test needs real variation between tries, not one cached answer
 repeated five times.
+
+### Unit 4 setup
+
+No new install — the MCP SDK was already in `requirements.txt` from the start
+of Unit 3 (see above), so this unit opens with what's already there, not a
+fresh `pip install`.
+
+**Confirm the environment still runs:**
+```bash
+# macOS / Linux
+source .venv/bin/activate
+python test.py
+```
+```powershell
+# Windows (PowerShell)
+.venv\Scripts\Activate.ps1
+python test.py
+```
+If `test.py` fails on something that passed in Unit 3, re-run
+`pip install -r requirements.txt` inside the activated environment first.
+
+**Confirm the agent still runs end to end:**
+```bash
+python app.py ask 'vintage graphic tee under $30'
+```
+Single quotes, same reason as above — this doesn't change for Unit 4.
+
+**One `RUNNING.md` entry worth knowing before it shows up unannounced:**
+`IncompleteFieldDefinitionWarning: Field 'lifespan'` is harmless noise from
+the MCP library's own dependencies — not this project's code, and not an
+error. `RUNNING.md`'s troubleshooting table confirms this exact line.
+
+**One real change in behavior, not a bug:** the response cache that made
+building free gets turned off for every Unit 4 test run
+(`run_eval.py` sets this automatically). Five tries of the same question are
+only a real test if the model actually answers five times — so a test run
+sends more requests than a build run did, and the starter pauses and paces
+itself more than it used to while building. That pause is expected; see
+Section 4 above and the Unit 3, Milestone 4 entry in Section 7 for what a
+rate-limit pause actually looks like when it happens.
