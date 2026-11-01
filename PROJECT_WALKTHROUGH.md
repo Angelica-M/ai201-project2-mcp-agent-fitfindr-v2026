@@ -180,53 +180,54 @@ By the end of Unit 4, the project demonstrates the ability to:
 - Test a system with repeated tries, not one lucky run.
 - Trace an agent's decisions and say why it chose each step.
 
-### How it's put together (architecture)
+### Architecture
 
-One request, traced top to bottom through every file it touches. This is the
-real flow `python app.py ask '...' --trace` prints, with the file and
-function responsible for each step named directly on the diagram — not a
-simplified version of it.
+One request, traced top to bottom through every file it touches, including
+the two failure-handling stops that an earlier version of this diagram left
+out. This is the real flow `python app.py ask '...' --trace` prints, with
+the file and function responsible for each step named directly on the
+diagram — checked line by line against the current `agent.py`, not a
+simplified or remembered version of it.
 
 ```
-+-----------------------------------------------------+
-| You, in a terminal                                  |
-| $ python app.py ask 'vintage graphic tee under $30' |
-+-----------------------------------------------------+
++------------------------------+    +------------------------------+
+| You, in a terminal           |    | --empty-wardrobe flag?       |
+| $ python app.py ask '...'    |    | get_empty_wardrobe() or      |
++------------------------------+    | get_example_wardrobe()       |
+                                    | -> data/wardrobe_schema.json |
+                                    +------------------------------+
+                |                   |
+                v                   v
++----------------------------------------------------+
+| app.py -- the command line                         |
+| loads the wardrobe BEFORE calling the agent, then: |
+| calls agent.py :: run_agent(query, wardrobe)       |
++----------------------------------------------------+
                            |
                            v
-
-+------------------------------------------------------------+
-| app.py -- the command line                                 |
-| reads flags (--trace, --empty-wardrobe), picks a wardrobe, |
-| calls agent.py :: run_agent(query, wardrobe)               |
-+------------------------------------------------------------+
-                               |
-                               v
-
-+------------------------------------------------------------+
-| agent.py :: run_agent()  --  THE PLANNING LOOP              |
-|                                                              |
-| session = { query, parsed, search_results, selected_item,  |
-|             wardrobe, outfit_suggestion, fit_card, error }  |
-|                                                              |
-| trace.py prints one line per step, when --trace is used    |
-+------------------------------------------------------------+
-                               |
-                               v
-
++---------------------------------------------------------------+
+| agent.py :: run_agent()  --  THE PLANNING LOOP                |
+|                                                               |
+| session = { query, parsed, search_results, selected_item,     |
+|             wardrobe, outfit_suggestion, fit_card, error }    |
+|                                                               |
+| trace.py :: step() prints one line per call below;            |
+| trace.py :: check_iterations() guards against an endless loop |
++---------------------------------------------------------------+
+                                |
+                                v
 STEP 1   _parse_query(query)  ->  session["parsed"]
 
          |
          v
-
 STEP 2   search_listings(...)  --  the ONE tool moved onto MCP
 
-         agent.py -> mcp_client.py -> (spawns) mcp_server.py
-            -> tools.py :: search_listings()
+         agent.py -> mcp_client.py -> (spawns, fresh, every call)
+            mcp_server.py -> tools.py :: search_listings()
                -> utils/data_loader.py -> data/listings.json
 
          |
-  +------+------+   <-- THE REQUIRED BRANCH
+  +------+------+   <-- BRANCH 1 (the one Unit 3 requires)
   |             |
 no results   results found
   |             |
@@ -234,27 +235,56 @@ no results   results found
 
 +------------------------------------+     STEP 3   suggest_outfit(item, wardrobe)
 | STOP HERE.                         |                 -> tools.py -> generate.py -> Gemini
-| session["error"] = "No listings    |                    (hosted model, via google-genai;
-| matched..." -- names what to       |                     paced + cached per config.py)
-| change (price / size / keywords)   |
-|                                    |     STEP 4   create_fit_card(outfit, item)
-| Steps 3 and 4 never run.           |                 -> tools.py -> generate.py -> Gemini
-+------------------------------------+
+| session["error"] = "No listings    |                    (hosted model, via google-genai)
+| matched..." -- names what to       |              if ModelUnavailable:  BRANCH 2a  -> STOP,
+| change (price / size / keywords)   |              session["error"] = str(exc), step 4 never runs
+|                                    |
+| Steps 3 and 4 never run.           |     STEP 4   create_fit_card(outfit, item)
++------------------------------------+                 -> tools.py -> generate.py -> Gemini
+                                                    if ModelUnavailable:  BRANCH 2b  -> STOP,
+                                                    session["error"] = str(exc)
+
                                            Back to app.py: prints Found / Outfit / Fit card
-                                           (or session["error"], if it stopped at the branch)
+                                           (or session["error"], if it stopped at any branch)
 ```
 
-Three things worth noticing in this diagram, each tied to a specific
-engineering decision documented in Section 7: `search_listings` runs in a
-**separate process** (`mcp_server.py`), reached through `mcp_client.py`
-rather than called directly — that's the Unit 4, Milestone 1 MCP move.
-`suggest_outfit` and `create_fit_card` both route through the **same**
-`generate.py`, which is deliberate — it's the one place in the whole project
-that talks to a hosted model, so pacing, caching, and error handling only
-have to be written once. And the branch in the middle is the **one required
-branch** this whole project is built around (Unit 3, Milestone 2) — without
-it, this diagram would just be a straight line, and a straight line is a
-script, not an agent.
+**Three branches, not one.** Unit 3 required exactly one — Branch 1, the
+empty-search stop. Unit 4's deliberate-failure-handling work (Milestone 2)
+added two more of the same shape, catching `ModelUnavailable` around each of
+the two model-calling tools so a rejected API key produces a clean
+`session["error"]` instead of an unhandled exception. All three follow the
+identical pattern: set `session["error"]`, stop, let the later fields stay
+`None` — which is exactly what makes them checkable by comparing a session
+dict rather than by reading logs.
+
+**Two data sources, loaded two different ways.** The wardrobe is read once,
+by `app.py`, *before* `run_agent` is even called, and travels through the
+session from the start. The listings file is read per search, inside the
+MCP subprocess, via `search_listings` itself. They look similar (`data/*
+.json`, both through `utils/data_loader.py`) but enter the system at
+different points — conflating them was a real risk named back in Unit 3,
+Milestone 1.
+
+**`search_listings` runs in a genuinely separate, short-lived process.**
+`mcp_client.py`'s own docstring says it plainly: "every call starts the
+server, asks, and stops it again." It is not a persistent connection — each
+of the 50 MCP round-trips made across Unit 4's two full test runs (see
+Section 7) started a fresh `mcp_server.py` subprocess, asked its one
+question, and shut it down.
+
+**`suggest_outfit` and `create_fit_card` share one chokepoint on purpose:**
+`generate.py`. It's the only place in the project that calls the hosted
+model, reading `GEMINI_API_KEY` from `.env` and the pacing, caching, and
+model-name settings from `config.py` — so request pacing, response caching,
+and `ModelUnavailable` all only had to be written once, not twice.
+
+**Not pictured, and why.** `scenarios.py` + `run_eval.py` call
+`agent.py::run_agent` directly, bypassing `app.py` entirely — a third real
+entry point into the loop, used for every Unit 4 test run, left off the main
+diagram because it's a *testing* path rather than part of the request flow a
+user triggers. `serve.py` (an HTTP alternative to `app.py`) exists in the
+repository but belongs to Unit 9 and has never been run as part of this
+project so far — see Section 8.
 
 ---
 
