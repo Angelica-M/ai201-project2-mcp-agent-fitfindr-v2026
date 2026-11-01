@@ -64,7 +64,7 @@ that got silently dropped between two function calls, the tool description
 that didn't say what it actually returns. Those are engineering problems, and
 they're the ones this unit (and this document) is about.
 
-### Learning objectives
+### Learning objectives (Unit 3)
 
 By the end of Unit 3, the goal is to be able to:
 
@@ -287,7 +287,7 @@ python app.py ask 'vintage graphic tee under $30'
 failure below.
 
 Real output (trimmed to the parts that matter; a full trace-level version is in
-Milestone entries below once added):
+the Unit 4, Milestone 2 entry in Section 7):
 ```
 [2] search_listings (via MCP)
       out: 10 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey … +7 more
@@ -306,8 +306,8 @@ An invalid or misconfigured `GEMINI_API_KEY` is the most likely thing to go
 wrong when `suggest_outfit` or `create_fit_card` runs — both call the hosted
 model, and a bad key surfaces there, not at startup. The full real diagnosis
 (what the error looked like, what was actually wrong with `.env`, and the fix)
-is recorded under **Milestone 4** below, since that's the step where it
-actually happened — not repeated here.
+is recorded under **Unit 3, Milestone 4** below, since that's the step where
+it actually happened — not repeated here.
 
 ---
 
@@ -509,7 +509,7 @@ list" gives it nothing to check.
 **Where the answers went.** README.md's **Tool Inventory** section (the
 four-line spec per tool, plus the Agent Loop Branching Rule). Real commit:
 `a1f8f7e` (2026-09-30), *"README.md Tool Inventory (draft section; needs
-cleanup)"* — README +82/−16 lines, `tools.py` +1/−1 (a minor stub comment, not
+cleanup)"* — README +81/−15 lines, `tools.py` +1/−1 (a minor stub comment, not
 an implementation). **One commit covers all three tool specs and the branch
 rule together**, not one commit per tool — a real departure from "each step
 committed on its own," named here rather than smoothed over. The commit's own
@@ -589,7 +589,7 @@ works" can't quietly redefine what "working" meant.
 reasons. Real commit: `55ee4f7` (2026-10-02), *"citeria.md Complete"* (the
 project's own commit message, typo included — left exactly as it is here,
 since this document's job is accuracy, not tidying up history).
-`criteria.md` +41/−27 lines; README −97/+27 (the Tool Inventory draft from
+`criteria.md` +15/−26 lines; README +12/−71 (the Tool Inventory draft from
 Milestone 2 condensed as a side effect of this same commit).
 
 **Step: read the two given criteria.**
@@ -676,12 +676,14 @@ four different layers (a tool, the loop, the session, or the model).
 **Where the answers went.** `tools.py` (all three implementations);
 `config.py` and `generate.py` (two small fixes found while testing); README's
 **Sample Run** section (the three per-tool terminal tests). Two real commits:
-`739c422` (2026-10-02, *"Defined 3 funcs in tools.py..."*, `tools.py` +110
-lines) for the implementations, and `4220e00` (same day, *"Robust fixes to
-config.py and generate.py, ran tests on the tools.py's 3 ai agent tools"*)
-for the fixes found while actually running the tests this milestone
-requires. As with Milestone 2, this is two commits for the whole milestone,
-not one per tool.
+`739c422` (2026-10-02, *"Defined 3 funcs in tools.py..."*, `tools.py`
++103/−7 lines) for the implementations, and `4220e00` (same day, *"Robust
+fixes to config.py and generate.py, ran tests on the tools.py's 3 ai agent
+tools"*, README +20, `config.py` +1/−1, `generate.py` +1/−1) for the fixes
+found while actually running the tests this milestone requires. Two commits
+for the whole milestone, not one per tool — unlike Milestone 2's single
+commit, but the same underlying pattern: real commits group by what was
+worked on in one sitting, not by the milestone's own step boundaries.
 
 **Step: `search_listings`.**
 - What changed: built against `utils/data_loader.py::load_listings()` (not
@@ -822,7 +824,7 @@ clothing — not an agent.
 **Where the answers went.** `agent.py::run_agent` (and its helper
 `agent.py::_parse_query`); README's **Planning Loop** section. Real commit:
 `5ec9944` (2026-10-05, *"Defined run_agent() in agent.py, and README
-additions"*) — `agent.py` +86 lines, README +341/−30. One commit for the
+additions"*) — `agent.py` +84/−2 lines, README +313/−28. One commit for the
 whole milestone.
 
 **Step: fill in `run_agent()`, following the Milestone 2 branch rule.**
@@ -1456,10 +1458,13 @@ attempt, verified against real before/after data.
 
 ### Unit 4, Milestone 6: Say What's Still Broken
 
-**The idea.** No criterion currently reads MISSED in the final numbers, and
-that's a real result — but "nothing missed" is not the same claim as
-"nothing left to do." This step is the honest accounting of what's genuinely
-unresolved, even when the scoreboard looks clean.
+**The idea.** By the end of Milestone 5, every criterion's current verdict
+reads MET — including criterion 4, whose real before-run miss (established
+in Milestone 4's revisit) was fixed and re-verified. That's worth being
+precise about: it means the test is clean *now*, not that nothing was ever
+found broken, and it is not the same claim as "nothing left to do." This step
+is the honest accounting of what's genuinely unresolved even once the
+scoreboard is clean.
 
 **Where the answers went.** README's "What's Still Broken," "On the MCP
 move" (an added update), and "How I Used AI" (two more moments) sections.
@@ -1521,9 +1526,10 @@ honestly: the four items in the table above.
 
 **Before moving on:**
 - *"For each criterion still missed, say what you'd do and why you
-  stopped."* — addressed directly: no criterion is currently missed, so the
-  broader honest accounting above (four real residual gaps) stands in for
-  it.
+  stopped."* — addressed directly: no criterion's *current* verdict reads
+  MISSED (the one real miss found, criterion 4's before run, was already
+  fixed in Milestone 5), so the broader honest accounting above (four real
+  residual gaps) stands in for a miss-by-miss list.
 - *"Commit."* — **True**: `c2602bb`, plus `64a4b85` for the later additions.
 
 ---
