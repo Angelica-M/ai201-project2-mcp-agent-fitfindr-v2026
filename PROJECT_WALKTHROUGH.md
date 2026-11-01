@@ -64,7 +64,7 @@ that got silently dropped between two function calls, the tool description
 that didn't say what it actually returns. Those are engineering problems, and
 they're the ones this unit (and this document) is about.
 
-### Learning objectives (Unit 3)
+### Learning Objectives (Unit 3)
 
 By the end of Unit 3, the goal is to be able to:
 
@@ -118,7 +118,7 @@ actually chose and why, and a diagnosis that names the failing step — that's
 the difference between having run a system in production and having demoed it
 once.
 
-### Learning objectives (Unit 4)
+### Learning Objectives (Unit 4)
 
 By the end of Unit 4, the goal is to be able to:
 
@@ -131,9 +131,9 @@ By the end of Unit 4, the goal is to be able to:
 
 ---
 
-## 2. Project Title, Problem, and Goals
+## 2. Project Title, Problem, Goals, and Architecture
 
-### FitFindr
+### Overview (Unit 3)
 
 **The problem it solves:** thrifting (buying secondhand clothes) takes real
 effort. A person searches several apps, tries to picture how a found item
@@ -157,7 +157,7 @@ By the end of Unit 3, the project demonstrates the ability to:
 - Write acceptance criteria for a system whose behavior changes from run to
   run (because part of it calls a language model).
 
-### FitFindr, Part 2 — Testing (Unit 4)
+### Overview (Unit 4)
 
 Unit 3 wrote down what "working" would mean for FitFindr, before any results
 existed. Unit 4 is the part where that's actually found out — against the
@@ -286,6 +286,98 @@ user triggers. `serve.py` (an HTTP alternative to `app.py`) exists in the
 repository but belongs to Unit 9 and has never been run as part of this
 project so far — see Section 7.
 
+#### Sequence Diagram
+
+Moved here from the README, where a sequence diagram covering this same
+request flow previously lived as a standalone image
+(`assets/FitFindr_webSeqDiagram.jpg`, generated with webSequenceDiagrams.com)
+with accompanying prose. Checked against the current `agent.py`, `app.py`,
+`tools.py`, and `generate.py` before relocating. Five inaccuracies found and
+corrected below; the image itself is left in place in `assets/` as a
+historical artifact but is no longer referenced anywhere active, since its
+errors are baked into the pixels and can't be annotated:
+
+1. **Wrong terminal-facing component.** The original named `agent.py` as the
+   component that reads terminal input. It's `app.py` that parses CLI flags
+   and calls `agent.py::run_agent` — `agent.py` has no terminal interaction
+   at all.
+2. **Wardrobe input mischaracterized.** The original showed "Enter query and
+   wardrobe" as one freeform input step. The wardrobe is actually chosen by
+   a CLI flag (`--empty-wardrobe` or its absence), loaded by `app.py` via
+   `utils/data_loader.py` *before* `run_agent` is called — a separate path
+   from the query, not part of the same input.
+3. **`generate.py` and the hosted model were entirely absent.** The original
+   collapsed "select first listing; suggest outfit; create fit card" into a
+   single internal step on `agent.py`'s own lifeline, with no external call
+   shown. In the real system, both `suggest_outfit` and `create_fit_card`
+   call `generate.py`, which calls the hosted Gemini model via
+   `google-genai` — the slowest, highest-latency, only-failable-by-network
+   part of the whole request. Omitting it is not a simplification; it hides
+   the one dependency most likely to need pacing, caching, or a failure
+   handler, which is exactly what `generate.py` provides.
+4. **Only one of three branches was shown.** The original documented the
+   empty-search guardrail correctly, but it was drawn before Unit 4,
+   Milestone 2 added two more: a `try/except ModelUnavailable` around each
+   of `suggest_outfit` and `create_fit_card`. All three follow the same
+   shape (set `session["error"]`, stop, skip remaining steps).
+5. **Naming.** "FitFinder" and `fitfitr` are both typos of the project's
+   actual name, FitFindr.
+
+**The corrected flow**, participant by participant:
+
+*Participants:* Terminal (end user) · `app.py` (command line) ·
+`agent.py::run_agent()` (the planning loop) · `tools.py` (the three tool
+implementations) · `mcp_client.py` / `mcp_server.py` (MCP transport,
+`search_listings` only) · `generate.py` → Gemini, via `google-genai`
+(`suggest_outfit` and `create_fit_card` only).
+
+**Phase 1 — ingestion and query parsing**
+1. User runs `python app.py ask '<query>' [--empty-wardrobe] [--trace]`.
+2. `app.py` loads the wardrobe (`get_example_wardrobe()` or
+   `get_empty_wardrobe()`, from `data/wardrobe_schema.json`) based on the
+   flag, before calling the agent.
+3. `app.py` calls `agent.py::run_agent(query, wardrobe)`.
+4. `run_agent()` calls `_parse_query(query)` → `session["parsed"] =
+   {description, size, max_price}`.
+
+**Phase 2 — MCP tool invocation (`search_listings` only)**
+5. `run_agent()` calls `call_tool("search_listings", arguments)` via
+   `mcp_client.py`.
+6. `mcp_client.py` starts `mcp_server.py` as a fresh subprocess over stdio
+   for this one call — not a persistent connection; it starts and stops on
+   every call.
+7. `mcp_server.py` calls `tools.py::search_listings()`, which reads
+   `data/listings.json` via `utils/data_loader.py`.
+8. The server returns matching listing dictionaries; `mcp_client.py`
+   unwraps the response into a native Python list.
+
+**Phase 3 — branch 1: empty-results guardrail**
+9. If `session["search_results"]` is empty: `session["error"]` is set to a
+   message naming what to change, and `run_agent()` returns immediately.
+   `suggest_outfit` and `create_fit_card` are never called.
+
+**Phase 4 — outfit and caption generation (the part the original diagram
+omitted)**
+10. If results were found: `session["selected_item"] =
+    session["search_results"][0]`.
+11. `run_agent()` calls `tools.py::suggest_outfit(selected_item, wardrobe)`
+    directly — not through MCP. `suggest_outfit` calls
+    `generate.py::generate()`, which reads `GEMINI_API_KEY` from `.env`,
+    applies pacing and caching from `config.py`, and calls Gemini via
+    `google-genai`.
+    - **Branch 2a:** if `generate()` raises `ModelUnavailable`,
+      `run_agent()` catches it, sets `session["error"]`, and returns.
+      `create_fit_card` is never called.
+12. If `suggest_outfit` succeeds: `run_agent()` calls
+    `tools.py::create_fit_card(outfit, selected_item)`, which also calls
+    `generate.py::generate()` → Gemini.
+    - **Branch 2b:** the same `ModelUnavailable` handling, mirrored.
+
+**Phase 5 — response rendering**
+13. `run_agent()` returns the finished session to `app.py`, which prints
+    `Found:` / `Outfit:` / `Fit card:`, or `session["error"]` if the loop
+    stopped at any of the three branches.
+
 ---
 
 ## 3. Glossary
@@ -406,7 +498,7 @@ the Unit 4, Milestone 2 entry in Section 6):
 2 model calls this session, 763 prompt + 361 output tokens
 ```
 
-### The common failure worth knowing about before it happens
+### Known Failure Mode: Invalid API Key
 
 An invalid or misconfigured `GEMINI_API_KEY` is the most likely thing to go
 wrong when `suggest_outfit` or `create_fit_card` runs — both call the hosted
@@ -417,7 +509,7 @@ it actually happened — not repeated here.
 
 ---
 
-## 5. What I Learned
+## 5. Findings and Lessons Learned
 
 Eight findings from both units, each stated with the evidence behind it.
 Milestone-level detail for all of these is in Section 6.
@@ -1644,15 +1736,18 @@ honestly: the four items in the table above.
 
 ---
 
-### Also in this repository, outside this walkthrough's chronicled work
+### Other Repository Changes Outside This Walkthrough
 
-The real commit history includes a few commits this document doesn't narrate
-in detail: an architecture/sequence-diagram section added to `README.md`
-(`10ea8cb`) and several image-placement commits (`221e9a7`, `257c5b5`,
-`282f82d`). These were added directly to the repository rather than through
-the process this walkthrough documents, so their exact content isn't
-re-described here — named for completeness rather than left silently out of
-the real commit list.
+The real commit history includes a few commits added directly to the
+repository rather than through the process this document chronicles:
+`10ea8cb` (an architecture/sequence-diagram section originally added to
+`README.md`) and three image-placement commits (`221e9a7`, `257c5b5`,
+`282f82d`). The sequence-diagram content from `10ea8cb` is no longer
+"outside" this walkthrough as of a later pass — it was reviewed for
+accuracy, corrected, and relocated into the Architecture section above (see
+"Sequence Diagram"). The image-placement commits remain outside this
+document's scope and aren't re-described here — named for completeness
+rather than left silently out of the real commit list.
 
 ---
 
@@ -1661,9 +1756,9 @@ the real commit list.
 The required feature set, as specified in each unit's brief, with a note on
 how each one currently stands in this repository.
 
-### Unit 3 required features
+### Unit 3 Required Features
 
-#### Three required tools (named inputs and outputs)
+#### Three Required Tools
 
 | Tool | Signature | What it does |
 |---|---|---|
@@ -1673,17 +1768,17 @@ how each one currently stands in this repository.
 
 More tools are allowed beyond these three; none have been added.
 
-#### A planning loop with at least one required branch
+#### Planning Loop with a Required Branch
 
 When `search_listings` comes back empty, the loop must stop and say so — it
 must not call the next tool (`suggest_outfit`) with nothing to work from.
 
-#### Session state across tool calls
+#### Session State Across Tool Calls
 
 The item `search_listings` finds has to flow into `suggest_outfit` on its own.
 The user is never asked to type it a second time.
 
-#### A way to run it
+#### Execution Interface
 
 A command-line script or a small web page — it has to work without someone
 standing next to it operating it by hand.
@@ -1693,14 +1788,14 @@ standing next to it operating it by hand.
 (`serve.py`, behind an HTTP server) also exists in this repository but belongs
 to a later unit (Unit 9) and is out of scope for Units 3–4.
 
-#### Five acceptance criteria
+#### Five Acceptance Criteria
 
 Two given, three written specifically for this project, each with its own
 stated target and a reason tied to the mechanism behind it. The full list
 lives in `criteria.md`; real results against all five are in Section 6's
 Unit 4 milestones.
 
-### Unit 4 required features
+### Unit 4 Required Features
 
 | Feature | What it requires | Current state |
 |---|---|---|
@@ -1723,9 +1818,9 @@ where this specific repository's reality (its actual packages, its actual
 the general course text. This section is the condensed, project-specific
 version.
 
-### Unit 3 setup
+### Unit 3 Setup
 
-#### Install the dependencies and add your key
+#### Install Dependencies and Add Your API Key
 
 **macOS / Linux**
 ```bash
@@ -1757,7 +1852,7 @@ mid-project.
 Activate the virtual environment every time a new terminal is opened — look for
 `(.venv)` at the start of the prompt.
 
-#### Confirm it works
+#### Verify the Setup
 
 ```bash
 python test.py
@@ -1767,7 +1862,7 @@ python test.py
 command, which command belongs to which milestone, what each file does, and
 what to do when something breaks. It is read, not edited.
 
-#### The one quoting rule that matters everywhere
+#### Required Quoting for CLI Queries
 
 ```bash
 python app.py ask 'vintage graphic tee under $30'
@@ -1780,7 +1875,7 @@ price ceiling applied, and nothing warns that it happened. That's why every
 example command in this document and in `ENVIRONMENT_SETUP.md` uses single
 quotes.
 
-#### About the model calls
+#### Rate Limits and Response Caching
 
 Two of this project's three tools (`suggest_outfit`, `create_fit_card`) call a
 hosted language model; `search_listings` does not. One full run of the agent
@@ -1793,7 +1888,7 @@ debugging costs nothing — Unit 4's test runs turn that caching off on purpose,
 because a test needs real variation between tries, not one cached answer
 repeated five times.
 
-### Unit 4 setup
+### Unit 4 Setup
 
 No new install — the MCP SDK was already in `requirements.txt` from the start
 of Unit 3 (see above), so this unit opens with what's already there, not a
