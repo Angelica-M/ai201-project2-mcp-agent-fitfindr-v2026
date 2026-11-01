@@ -288,10 +288,8 @@ project so far — see Section 7.
 
 #### Sequence Diagram
 
-Moved here from the README, where a sequence diagram covering this same
-request flow previously lived as a standalone image
-(`assets/FitFindr_webSeqDiagram.jpg`, generated with webSequenceDiagrams.com)
-with accompanying prose. Checked against the current `agent.py`, `app.py`,
+Note an archived sequence diagram covering this app's request flow lives as a standalone image
+(`assets/FitFindr_webSeqDiagram.jpg`, generated with webSequenceDiagrams.com). Checked against the current `agent.py`, `app.py`,
 `tools.py`, and `generate.py` before relocating. Five inaccuracies found and
 corrected below; the image itself is left in place in `assets/` as a
 historical artifact but is no longer referenced anywhere active, since its
