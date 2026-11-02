@@ -1,4 +1,4 @@
-# FitFindr
+# MCP Agent FitFindr
 
 > ### 👋 Start here
 >
@@ -23,16 +23,11 @@
 <!-- ─────────────────────────────────────────────────────────────────────────
      HOW TO USE THIS FILE
 
-     This is your submission. Fill each section in as you finish the milestone
-     it belongs to — don't leave it all to the end.
-
+     Each section is filled in as each milestone that it belongs to is finished
+     
      Unit 3 asks for the first five sections. Unit 4 adds the five below them.
      Leave the unit 4 sections alone until then; they're here so you know
      what's coming.
-
-     Everything is pasted as TEXT. No screenshots, no images, no video links.
-     A typed block of output gets full credit; a picture of the same output
-     gets none.
      ───────────────────────────────────────────────────────────────────────── -->
 
 <!-- ═══════════════════════ UNIT 3 — THE BUILD ═══════════════════════ -->
